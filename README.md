@@ -17,3 +17,5 @@ http://localhost:8080  - frontend/site
 http://localhost:8081  - phpmyadmin/banco de dados
 
 http://localhost:8000  - backend/api, rotas e mais
+
+
