@@ -5,7 +5,7 @@ Para iniciar precisa do docker desktop inicializado e posteriormente digite no t
 
 //Inicia o container docker para testar o aplicação:
 
-docker compose up -d --build
+docker compose up -d
 
 //Destroi o container:
 
