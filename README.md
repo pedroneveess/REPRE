@@ -3,10 +3,10 @@ Projeto de TCC
 Para iniciar digite no teminal: 
 
 
-//Inicia o container docker para testar o aplicação 
+//Inicia o container docker para testar o aplicação:
 docker compose up -d --build
 
-//Destroi o container
+//Destroi o container:
 docker compose down
 
 
