@@ -1,0 +1,68 @@
+services:
+
+  frontend:
+    build:
+      context: ./FrontendREPRE
+      dockerfile: Dockerfile
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - ./FrontendREPRE:/usr/share/nginx/html
+
+    networks:
+      - tcc_network
+
+  backend:
+    build:
+      context: ./BackendREPRE
+      dockerfile: Dockerfile
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./BackendREPRE:/var/www
+
+    networks:
+      - tcc_network
+
+  mysql:
+    image: mysql:8.4
+    container_name: repre_mysql
+
+    environment:
+      MYSQL_DATABASE: tcc_banco_de_dados
+      MYSQL_USER: repre_user
+      MYSQL_PASSWORD: repre_senha
+      MYSQL_ROOT_PASSWORD: repre_root_senha
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - tcc_network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: repre_phpmyadmin
+
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+
+    ports:
+      - "8081:80"
+
+    networks:
+      - tcc_network
+
+volumes:
+  mysql_data:
+
+networks:
+  tcc_network:

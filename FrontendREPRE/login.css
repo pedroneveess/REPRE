@@ -1,0 +1,251 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #f0eef8;
+    min-height: 100vh;
+}
+
+
+.bg-books {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.book {
+    position: absolute;
+    top: -60px;
+    animation: fall linear infinite;
+    will-change: transform;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    100% {
+        transform: translateY(110vh) rotate(360deg);
+    }
+}
+
+@keyframes fade-down {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade {
+    opacity: 0;
+    animation: fade-down 0.6s ease both;
+}
+
+
+.card-login {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 690px;
+    height: 590px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    top: 12vh;
+}
+
+.card-login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.content {
+    flex: 1;
+    padding: 28px 28px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-bg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    animation: fadeDown 0.5s ease both;
+}
+
+.logo-icon {
+    width: 70px;
+    height: 70px;
+    background: #ede9f9;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon img {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+}
+
+.logo-text {
+    font-size: 26px;
+    font-weight: 700;
+    color: #584391;
+    letter-spacing: 7px;
+    text-align: center;
+}
+
+.sub-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #312f36;
+    text-align: center;
+    line-height: 1.55;
+    margin-bottom: 28px;
+    animation: fadeDown 0.5s 0.1s ease both;
+}
+
+.form-input {
+    width: 100%;
+    padding: 15px;
+    border-radius: 16px;
+    border: 1.5px solid #ccc;
+    font-size: 18px;
+    font-weight: 400;
+    font-family: 'Montserrat', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+    margin-bottom: 12px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #584391;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Montserrat', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    letter-spacing: 0.3px;
+    margin-top: 12px;
+    margin-bottom: 28px;
+}
+
+.btn-entrar {
+    background-color: #584391;
+    color: #ffffff;
+    border: none;
+    margin-bottom: 47px;
+}
+
+.btn-entrar:hover {
+    background-color: #452d7a;
+    box-shadow: 0 6px 20px rgba(88, 67, 145, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-entrar:active {
+    transform: scale(0.98);
+}
+
+
+.forgot-password {
+    margin-top: 18px;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgb(184, 134, 11);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.register-link {
+    margin-top: 16px;
+    font-size: 16px;
+    color: #312f36;
+}
+
+footer {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12px;
+    color: rgb(100 116 139);
+    top: 27vh;
+}
+
+.back {
+    position: absolute;
+    top: 0px;
+    left: 20px;
+    font-size: 18px;
+    max-width: 120px;
+    color: rgb(192, 18, 18);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid;
+    transition: all 0.2s ease;
+}
+
+.back:hover {
+    background-color: rgb(192, 18, 18);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(88, 67, 145, 0.15);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 420px) {
+    .fundo-pagina {
+        padding: 0;
+        background: #ffffff;
+        align-items: flex-start;
+    }
+
+    .frame-celular {
+        width: 100%;
+        min-height: 100vh;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+}

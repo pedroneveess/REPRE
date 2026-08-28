@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repre</title>
+  <link rel="stylesheet" href="home.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+</head>
+
+<body>
+  <div class="layout">
+
+    <!--HEADER -->
+    <div class="header">
+      <div class="header-nav">
+        <div class="sininho">
+          <i class="fa-solid fa-bell" style="color: #584391"></i>
+        </div>
+        <div class="profile">
+          <img src="imagem-foto-perfil.jpg" alt="Foto de perfil" />
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header"></div>
+      <a href__="home.html" class="sidebar-item">
+        <i class="fa-solid fa-house" style="color: #584391"></i>
+        <span class="a-text">Início</span>
+      </a>
+      <a href__="atividades.html" class="sidebar-item">
+        <i class="fa-solid fa-book" style="color: #584391"></i>
+        <span class="a-text">Atividades</span>
+      </a>
+      <a href__="dashboard.html" class="sidebar-item">
+        <i class="fa-solid fa-chart-line" style="color: #584391"></i>
+        <span class="a-text">Desempenho</span>
+      </a>
+      <a href__="#" class="sidebar-item">
+        <i class="fa-solid fa-gear" style="color: #584391"></i>
+        <span class="a-text">Configurações</span>
+      </a>
+      <a href__="calendario.html" class="sidebar-item">
+        <i class="fa-solid fa-calendar" style="color: #584391"></i>
+        <span class="a-text">Calendário</span>
+      </a>
+      <a href__="#" class="sidebar-item">
+        <i class="fa-solid fa-users" style="color: #584391"></i>
+        <span class="a-text">Grêmio e Atlética</span>
+      </a>
+    </aside>
+
+    <main class="content">
+
+      <!-- CABEÇALHO DA PÁGINA -->
+      <section class="welcome">
+        <h1 class="sub-text">Olá, [Nome de usuário]</h1>
+        <p class="sub-sub-text">
+          Confira suas atividades abaixo
+        </p>
+      </section>
+
+
+      <!-- RESUMO DIÁRIO -->
+      <section class="resumo-section">
+
+        <h2 class="resumo-title">
+          Resumo Diário
+        </h2>
+
+        <div class="resumo-scroll-wrap" id="resumoScroll">
+
+          <div class="resumo-inner">
+
+            <div class="resumo-card verde">
+              <span class="resumo-card-num">10</span>
+              <span class="resumo-card-label">
+                Atividades Concluídas
+              </span>
+            </div>
+
+            <div class="resumo-card amarelo">
+              <span class="resumo-card-num">10</span>
+              <span class="resumo-card-label">
+                Atividades Pendentes
+              </span>
+            </div>
+
+            <div class="resumo-card azul">
+              <span class="resumo-card-num">10</span>
+              <span class="resumo-card-label">
+                Atividades em Andamento
+              </span>
+            </div>
+
+            <div class="resumo-card vermei">
+              <span class="resumo-card-num">10</span>
+              <span class="resumo-card-label">
+                Atividades Atrasadas
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ATIVIDADES PENDENTES -->
+      <section class="wrapper-atividades">
+
+        <h2 class="title-atividades">
+          Atividades Pendentes
+        </h2>
+
+        <div class="cards-container" id="cards-container">
+        </div>
+
+      </section>
+
+    </main>
+    <footer class="footer">
+      © Todos os direitos reservados à New World.
+    </footer>
+  </div>
+
+  <script src="home.js"></script>
+</body>
+
+</html>
