@@ -4,9 +4,11 @@ Projeto de TCC
 Para iniciar precisa do docker desktop inicializado e posteriormente digite no teminal: 
 
 //Inicia o container docker para testar o aplicação:
+
 docker compose up -d --build
 
 //Destroi o container:
+
 docker compose down
 
 
