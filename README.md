@@ -12,7 +12,8 @@ docker compose up -d
 docker compose down
 
 
-No PC da Etec pode dar erro, oque resolveu aqui é entrar no powershell como Administrador e colocar: 
+No PC da Etec pode dar erro, oque resolveu aqui é entrar no powershell como Administrador e colocar:
+
 wsl --shutdown
 ipconfig /flushdns
 netsh winsock reset
