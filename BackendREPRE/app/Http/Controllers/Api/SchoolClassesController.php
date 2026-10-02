@@ -9,12 +9,6 @@ use App\Models\SchoolClass;
 class SchoolClassesController extends Controller
 {
     
-    public function index()
-    {
-        //
-    } 
-
-    
     public function CreateSchoolClass(Request $request)
     {
         $validated = $request->validate([
@@ -33,21 +27,23 @@ class SchoolClassesController extends Controller
 
     }
 
+
     
-    public function show(string $id)
+    public function UpdateSchoolClass(Request $request, string $id)
     {
-        
+        $SchoolClass = $request->SchoolClass();
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:100'],
+            'course' => ['sometimes', 'string', 'max:100'],
+            'semester' => ['sometimes', 'integer', 'between:1,8'],
+            'year' => ['sometimes', 'integer', 'between:2000'],
+        ]);
+
+        $SchoolClass->update($validated);
+
+        return response
     }
 
     
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    
-    public function destroy(string $id)
-    {
-        //
-    }
 }
