@@ -27,4 +27,16 @@ class User extends Model
     protected $hidden = [
         'password',
     ];
+
+    public function ClassMember(){
+        return $this->belongsToMany(SchoolClass::class);
+    }
+
+    public function TaskCompletion(){
+        return $this->belongsToMany(Task::class);
+    }
+
+    public function OrganizationMember(){
+        return $this->belongsToMany(Organization::class);
+    }
 }

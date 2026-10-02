@@ -1,0 +1,8 @@
+#584391 - roxo escuro destaque titulos
+#866dff - logo
+#9b91c2
+#7b8598 - texto
+#64748b
+#efedf7 - fundo
+#5843d4
+#312f36- texto normal

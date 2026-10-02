@@ -20,4 +20,12 @@ class Task extends Model
         'semester' => 'integer',
         'year'=> 'integer',
     ]; 
+
+    public function SchoolClassTasks(){
+        return $this->belongsTo(SchoolClass::class);
+    }
+
+    public function UserTaskCompletion(){
+        return $this->belongsToMany(User::class);
+    }
 }

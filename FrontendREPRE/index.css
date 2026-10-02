@@ -9,8 +9,13 @@
 body {
     font-family: 'Montserrat', sans-serif;
     background-color: #f0eef8;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
-
+/* Livros Caindo */
 .bg-books {
     position: fixed;
     inset: 0;
@@ -53,63 +58,69 @@ body {
     animation: fade-down 0.6s ease both;
 }
 
+/*@media (prefers-reduced-motion: reduce) {
+    .book {
+        animation: none;
+        display: none;
+    }
 
+    .fade {
+        animation: none;
+        opacity: 1;
+    }
+}
+*/
 header {
+    background-color: #e4e3eb;
     position: relative;
     z-index: 10;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 20px 32px;
-}
-
-.logo-chapeu {
-    display: flex;
-    align-items: center;
+    padding: 20px;
+    width: 100vw;
     gap: 10px;
     font-size: 24px;
     font-weight: 800;
     color: var(--slate-700);
     letter-spacing: 0.02em;
+    margin-bottom: 20px;
 }
 
 
-content {
-    top: 55px;
-    position: relative;
-    z-index: 10;
+
+main {
+    /* Flex:1 serve pra ocupar todo o espaço restante do container */
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 40px 24px;
+    gap: 20px;
 }
 
 .caixinha {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     background: rgba(255, 255, 255, 0.7);
     border: 1px solid rgba(203, 213, 225, 0.4);
     padding: 8px 16px;
-    border-radius: 999px;
-    margin-bottom: 55px;
+    border-radius: 100px;
     backdrop-filter: blur(4px);
-    animation-delay: 0s;
+    margin: 10px 15px 0px;
 }
+i.fa-solid.fa-user-graduate{
+    font-size: 25px;
+   }
 
 h1 {
-    font-size: 48px;
     font-weight: 800;
     line-height: 1.15;
     color: var(--slate-700);
     max-width: 720px;
-    margin: 0 0 24px 0;
-    animation-delay: 0.1s;
 }
 
 h1 .marcacao {
@@ -124,22 +135,23 @@ h1 .marcacao {
     line-height: 1.6;
     animation-delay: 0.2s;
     margin-bottom: 32px;
+    text-align: justify;
+    margin: 0px 15px;
 }
 
 .actions {
-    margin-top: 32px;
+    padding-top: 20px;
     display: flex;
     gap: 16px;
-    animation-delay: 0.3s;
+    flex-direction: column;
+    width: 93%;
 }
 
 .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 18px;
+   
+    font-size: 16px;
     font-weight: 700;
-    padding: 22px 42px;
+    padding: 18px;
     border-radius: 12px;
     text-decoration: none;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -148,7 +160,6 @@ h1 .marcacao {
 .btn-entrar {
     background-color: #584391;
     color: #ffffff;
-    border: none;
 }
 
 .btn-entrar:hover {
@@ -160,7 +171,6 @@ h1 .marcacao {
 .btn-cadastrar {
     background-color: #fff;
     color: #584391;
-    border: none;
 }
 
 .btn-cadastrar:hover {
@@ -169,8 +179,7 @@ h1 .marcacao {
 }
 
 footer {
-    position: relative;
-    z-index: 10;
+    margin-top: 20px;
     text-align: center;
     padding: 20px 0;
     font-size: 12px;
@@ -178,18 +187,40 @@ footer {
     top: 27vh;
 }
 
-@media (max-width: 640px) {
-    h1 {
-        font-size: 32px;
+@media (min-width: 768px) {
+   body{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+   }
+   .subtitle{
+    text-align: center;
+   }
+   .actions{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+   }
+   .btn{
+    width: 45%;
+   }
+   i.fa-solid.fa-user-graduate{
+    font-size: 20px;
+   }
+   h1{
+    font-size: 40px;
+   }
+}
+@media (min-width: 1200px){
+    main{
+        gap:50px;
     }
-
-    .actions {
-        flex-direction: column;
-        width: 100%;
-        max-width: 280px;
+    h1{
+        font-size: 50px;
     }
-
-    .features {
-        gap: 16px;
+    .caixinha, .subtitle, .btn{
+        font-size: 20px;
     }
 }

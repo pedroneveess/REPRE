@@ -21,4 +21,16 @@ class SchoolClass extends Model
         'semester' => 'integer',
         'year'=> 'integer',
     ]; 
+
+    public function ClassMembersUser(){
+        return $this->belongsToMany(User::class);
+    }
+
+    public function Tasks(){
+        return $this->hasMany(Task::class);
+    }
+
+    public function Posts(){
+        return $this->hasMany(Post::class);
+    }
 }
