@@ -10,12 +10,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('organization_members', function (Blueprint $table) {
-            $table->uuid('id')->primary();
             $table->foreignUuid('organization_id')->constrained('organizations')->onUpdate('cascade')->onDelete('cascade');
             $table->foreignUuid('user_id')->constrained('users')->onUpdate('cascade')->onDelete('cascade');
-            $table->unique(['organization_id', 'user_id']);
             $table->string('role')->default('member');
             $table->timestamps();
+            $table->primary(['organization_id', 'user_id']);
         });
     }
 

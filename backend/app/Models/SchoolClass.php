@@ -3,34 +3,39 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 
 class SchoolClass extends Model
 {
-    use HasUuids; 
+    use HasFactory, HasUuids;
 
     protected $fillable = [
-        'name', 
-        'course', 
+        'name',
+        'course',
         'semester',
-        'year', 
+        'year',
     ];
 
     protected $casts = [
         'semester' => 'integer',
         'year'=> 'integer',
-    ]; 
+    ];
 
-    public function ClassMembersUser(){
-        return $this->belongsToMany(User::class);
+    public function members(){
+        return $this->belongsToMany(User::class, 'class_members', 'class_id', 'user_id');
     }
 
-    public function Tasks(){
-        return $this->hasMany(Task::class);
+    public function tasks(){
+        return $this->hasMany(Task::class, 'class_id');
     }
 
-    public function Posts(){
-        return $this->hasMany(Post::class);
+    public function announcements(){
+        return $this->hasMany(Announcement::class, 'class_id');
+    }
+
+    public function calendarEvents(){
+        return $this->hasMany(CalendarEvent::class, 'class_id');
     }
 }
