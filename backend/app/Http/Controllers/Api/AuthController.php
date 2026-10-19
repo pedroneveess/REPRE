@@ -10,7 +10,6 @@ use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use App\Http\Requests\ForgotPasswordRequest;
@@ -90,11 +89,13 @@ class AuthController extends Controller
 
         $validated = $request->validated();
 
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        $user->update($validated);
+        DB::transaction(function () use ($user, &$validated) {
+            if (isset($validated['password'])) {
+                $validated['password'] = Hash::make($validated['password']);
+                $user->tokens()->delete();
+            }
+            $user->update($validated);
+        });
 
         return response()->json([
             'message' => 'Dados atualizados com sucesso.',

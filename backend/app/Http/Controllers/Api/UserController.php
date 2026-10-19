@@ -12,6 +12,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -72,7 +73,10 @@ class UserController extends Controller
         abort_unless($user, 404, 'Usuario nao encontrado.');
         $this->authorize('delete', $user);
         try {
-            $user->delete();
+            DB::transaction(function () use ($user) {
+                $user->tokens()->delete();
+                $user->delete();
+            });
         } catch (QueryException $exception) {
             if ($exception->getCode() === '23503') {
                 return response()->json(['message' => 'Usuario possui registros vinculados.'], 409);
