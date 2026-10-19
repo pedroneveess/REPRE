@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\CalendarEvent;
 use App\Models\User;
+use App\Models\SchoolClass;
 
 class CalendarEventPolicy
 {
@@ -23,9 +24,9 @@ class CalendarEventPolicy
         return $event->schoolClass->members()->where('users.id', $user->id)->exists();
     }
 
-    public function create(?User $user): bool
+    public function create(?User $user, SchoolClass $schoolClass): bool
     {
-        return $user && in_array($user->system_role, ['admin', 'teacher'], true);
+        return $user && ($user->system_role === 'admin' || ($user->system_role === 'teacher' && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists()));
     }
 
     public function update(?User $user, CalendarEvent $event): bool
@@ -38,7 +39,7 @@ class CalendarEventPolicy
         }
         return $user->system_role === 'teacher'
             && $event->class_id !== null
-            && $event->schoolClass->members()->where('users.id', $user->id)->exists();
+            && $event->schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists();
     }
 
     public function delete(?User $user, CalendarEvent $event): bool

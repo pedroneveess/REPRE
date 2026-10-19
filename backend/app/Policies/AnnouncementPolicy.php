@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\Announcement;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use App\Models\SchoolClass;
 
 class AnnouncementPolicy
 {
@@ -24,12 +24,12 @@ class AnnouncementPolicy
         return $model->schoolClass->members()->where('users.id', $user->id)->exists();
     }
 
-    public function create(?User $user): bool
+    public function create(?User $user, SchoolClass $schoolClass): bool
     {
         if (!$user) {
             return false;
         }
-        return in_array($user->system_role, ['teacher', 'admin']);
+        return $user->system_role === 'admin' || ($user->system_role === 'teacher' && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists());
     }
 
     public function update(?User $user, Announcement $model): bool
@@ -41,7 +41,7 @@ class AnnouncementPolicy
             return true;
         }
         if ($user->system_role === 'teacher') {
-            return $model->schoolClass->members()->where('users.id', $user->id)->exists();
+            return $model->schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists();
         }
         return false;
     }

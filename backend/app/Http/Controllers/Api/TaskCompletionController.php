@@ -28,7 +28,7 @@ class TaskCompletionController extends Controller
             return TaskCompletionResource::collection($query->paginate($request->perPage()));
         }
         if ($user->system_role === 'teacher') {
-            $query->whereHas('task.schoolClass.members', fn ($q) => $q->whereKey($user->id)->wherePivot('role', 'teacher'));
+            $query->whereHas('task.schoolClass.members', fn ($q) => $q->where('users.id', $user->id)->where('class_members.role', 'teacher'));
         } else {
             $query->where('user_id', $user->id);
         }

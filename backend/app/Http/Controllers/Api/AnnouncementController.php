@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAnnouncementRequest;
 use App\Http\Requests\UpdateAnnouncementRequest;
 use App\Http\Resources\AnnouncementResource;
 use App\Http\Requests\PaginationRequest;
+use App\Models\SchoolClass;
 
 class AnnouncementController extends Controller
 {
@@ -36,12 +37,10 @@ class AnnouncementController extends Controller
 
     public function store(StoreAnnouncementRequest $request)
     {
-        $this->authorize('create', Announcement::class);
         $validated = $request->validated();
+        $schoolClass = SchoolClass::findOrFail($validated['class_id']);
+        $this->authorize('create', [Announcement::class, $schoolClass]);
 
-        if ($request->user()->system_role === 'teacher' && !$request->user()->schoolClasses()->whereKey($validated['class_id'])->exists()) {
-            abort(403);
-        }
         $validated['created_by'] = $request->user()->id;
         return (new AnnouncementResource(Announcement::create($validated)))->response()->setStatusCode(201);
     }

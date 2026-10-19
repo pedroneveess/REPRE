@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCalendarEventRequest;
 use App\Http\Requests\UpdateCalendarEventRequest;
 use App\Http\Requests\PaginationRequest;
 use App\Http\Resources\CalendarEventResource;
+use App\Models\SchoolClass;
 
 class CalendarEventController extends Controller
 {
@@ -34,13 +35,15 @@ class CalendarEventController extends Controller
 
     public function store(StoreCalendarEventRequest $request)
     {
-        $this->authorize('create', CalendarEvent::class);
         $validated = $request->validated();
         $user = $request->user();
-        if ($user->system_role === 'teacher' && empty($validated['class_id'])) {
+        $schoolClass = !empty($validated['class_id']) ? SchoolClass::findOrFail($validated['class_id']) : null;
+        if ($schoolClass) {
+            $this->authorize('create', [CalendarEvent::class, $schoolClass]);
+        } elseif ($user->system_role !== 'admin') {
             abort(403);
         }
-        if ($user->system_role === 'teacher' && !$user->schoolClasses()->whereKey($validated['class_id'])->exists()) {
+        if ($user->system_role === 'teacher' && empty($validated['class_id'])) {
             abort(403);
         }
         $validated['created_by'] = $user->id;

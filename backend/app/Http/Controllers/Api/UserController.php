@@ -29,11 +29,9 @@ class UserController extends Controller
             $classIds = $user->schoolClasses()
                 ->wherePivot('role', 'teacher')
                 ->select('school_classes.id');
-            $query->where(function ($users) use ($user) {
+            $query->where(function ($users) use ($user, $classIds) {
                 $users->whereKey($user->id)
-                    ->orWhereHas('schoolClasses.members', fn ($members) => $members->where('users.id', $user->id));
-            })->whereHas('schoolClasses', function ($classes) use ($classIds) {
-                $classes->whereIn('school_classes.id', $classIds);
+                    ->orWhereHas('schoolClasses', fn ($classes) => $classes->whereIn('school_classes.id', $classIds));
             });
         } else {
             $query->whereKey($user->id);
