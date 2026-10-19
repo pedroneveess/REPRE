@@ -51,31 +51,17 @@ class TaskCompletionController extends Controller
 
     public function store(StoreTaskCompletionRequest $request)
     {
-        $this->authorize('create', TaskCompletion::class);
-
         $validated = $request->validated();
-
         $user = $request->user();
-
-        $existing = TaskCompletion::where('user_id', $user->id)
-            ->where('task_id', $validated['task_id'])
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'message' => 'Tarefa j� marcada como conclu�da.'
-            ], 409);
-        }
-
+        $task = Task::with('schoolClass')->findOrFail($validated['task_id']);
+        abort_unless($task->schoolClass->members()->whereKey($user->id)->exists(), 403);
         $completion = TaskCompletion::create([
             'user_id' => $user->id,
-            'task_id' => $validated['task_id'],
+            'task_id' => $task->id,
             'completed_at' => now(),
         ]);
-
         return (new TaskCompletionResource($completion))->response()->setStatusCode(201);
     }
-
     public function update(UpdateTaskCompletionRequest $request, string $id)
     {
         $completion = TaskCompletion::find($id);
