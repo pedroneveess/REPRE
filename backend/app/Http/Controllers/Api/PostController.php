@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
+use App\Models\Organization;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
@@ -34,11 +35,9 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request)
     {
-        $this->authorize('create', Post::class);
         $validated = $request->validated();
-        if ($request->user()->system_role === 'teacher' && !$request->user()->organizations()->whereKey($validated['organization_id'])->exists()) {
-            abort(403);
-        }
+        $organization = Organization::findOrFail($validated['organization_id']);
+        $this->authorize('create', [Post::class, $organization]);
         $validated['created_by'] = $request->user()->id;
         return (new PostResource(Post::create($validated)))->response()->setStatusCode(201);
     }

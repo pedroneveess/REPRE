@@ -37,7 +37,9 @@ class OrganizationController extends Controller
         $this->authorize('create', Organization::class);
         $validated = $request->validated();
         $organization = Organization::create($validated);
-        $organization->members()->attach($request->user()->id, ['role' => 'administrator']);
+        if ($request->user()->system_role === 'teacher') {
+            $organization->members()->attach($request->user()->id, ['role' => 'teacher']);
+        }
         return (new OrganizationResource($organization->load('members')))->response()->setStatusCode(201);
     }
 
