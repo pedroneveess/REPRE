@@ -47,9 +47,7 @@ class AuthController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => 'As credenciais informadas estão incorretas.'
-            ]);
+            return response()->json(['message' => 'Credenciais invalidas.'], 401);
         };
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -122,9 +120,7 @@ class AuthController extends Controller
             throw $exception;
         }
 
-        return response()->json([
-            'message' => 'Conta excluída com sucesso.',
-        ]);
+        return response()->json(null, 204);
     }
 
     public function loggedUser(Request $request)
