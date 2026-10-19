@@ -14,9 +14,11 @@ use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DashboardController;
 
-Route::post('/auth/register', [AuthController::class, 'createUser']);
+Route::post('/auth/register', [AuthController::class, 'createUser'])->middleware('throttle:10,1');
 
-Route::post('/auth/login', [AuthController::class, 'userLogin']);
+Route::post('/auth/login', [AuthController::class, 'userLogin'])->middleware('throttle:10,1');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
 

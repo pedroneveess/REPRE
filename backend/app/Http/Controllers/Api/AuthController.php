@@ -13,6 +13,9 @@ use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use App\Http\Requests\ForgotPasswordRequest;
+use App\Http\Requests\ResetPasswordRequest;
+use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
@@ -56,6 +59,24 @@ class AuthController extends Controller
             'user' => new UserResource($user),
             'token' => $token,
         ]);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        Password::sendResetLink($request->validated());
+        return response()->json(['message' => 'Se o email existir, enviaremos instrucoes de recuperacao.']);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        $status = Password::reset($request->validated(), function (User $user, string $password) {
+            $user->forceFill(['password' => Hash::make($password)])->save();
+            $user->tokens()->delete();
+        });
+        if ($status !== Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Nao foi possivel redefinir a senha.'], 422);
+        }
+        return response()->json(['message' => 'Senha redefinida com sucesso.']);
     }
 
     public function logoutUser(Request $request)
