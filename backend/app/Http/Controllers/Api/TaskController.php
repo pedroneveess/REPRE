@@ -44,9 +44,9 @@ class TaskController extends Controller
 
     public function store(StoreTaskRequest $request)
     {
-        $this->authorize('create', Task::class);
-
         $validated = $request->validated();
+        $schoolClass = SchoolClass::findOrFail($validated['class_id']);
+        $this->authorize('create', [Task::class, $schoolClass]);
 
         $validated['created_by'] = $request->user()->id;
 

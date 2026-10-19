@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use App\Models\SchoolClass;
 
 class TaskPolicy
 {
@@ -27,12 +27,9 @@ class TaskPolicy
         return $model->schoolClass->members()->where('users.id', $user->id)->exists();
     }
 
-    public function create(?User $user): bool
+    public function create(?User $user, SchoolClass $schoolClass): bool
     {
-        if (!$user) {
-            return false;
-        }
-        return in_array($user->system_role, ['teacher', 'admin']);
+        return $this->canManage($user, $schoolClass);
     }
 
     public function update(?User $user, Task $model): bool
@@ -43,10 +40,7 @@ class TaskPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        if ($user->system_role === 'teacher') {
-            return $model->schoolClass->members()->where('users.id', $user->id)->exists();
-        }
-        return false;
+        return $this->canManage($user, $model->schoolClass);
     }
 
     public function delete(?User $user, Task $model): bool
@@ -57,9 +51,18 @@ class TaskPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        if ($user->system_role === 'teacher') {
-            return $model->schoolClass->members()->where('users.id', $user->id)->exists();
+        return $this->canManage($user, $model->schoolClass);
+    }
+
+    private function canManage(?User $user, SchoolClass $schoolClass): bool
+    {
+        if (!$user) {
+            return false;
         }
-        return false;
+        if ($user->system_role === 'admin') {
+            return true;
+        }
+        $role = $user->system_role === 'teacher' ? 'teacher' : 'representative';
+        return $schoolClass->members()->whereKey($user->id)->wherePivot('role', $role)->exists();
     }
 }
