@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
 use App\Http\Requests\MemberRequest;
 use App\Http\Requests\PaginationRequest;
+use App\Http\Requests\UpdateMemberRoleRequest;
 use App\Http\Resources\UserResource;
 
 class ClassMemberController extends Controller
@@ -28,7 +29,7 @@ class ClassMemberController extends Controller
         return (new UserResource($class->members()->withPivot('role')->find($data['user_id'])))->response()->setStatusCode(201);
     }
 
-    public function update(MemberRequest $request, string $school_class, string $user_id)
+    public function update(UpdateMemberRoleRequest $request, string $school_class, string $user_id)
     {
         $class = SchoolClass::findOrFail($school_class);
         $this->authorize('update', $class);

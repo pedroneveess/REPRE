@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Http\Requests\OrganizationMemberRequest;
 use App\Http\Requests\PaginationRequest;
+use App\Http\Requests\UpdateOrganizationMemberRequest;
 use App\Http\Resources\UserResource;
 
 class OrganizationMemberController extends Controller
 {
-    private const ROLES = ['member', 'administrator', 'president', 'coordinator'];
+    private const ROLES = ['member', 'representative', 'teacher'];
 
     public function index(PaginationRequest $request, string $organization)
     {
@@ -28,7 +29,7 @@ class OrganizationMemberController extends Controller
         return (new UserResource($organization->members()->withPivot('role')->find($data['user_id'])))->response()->setStatusCode(201);
     }
 
-    public function update(OrganizationMemberRequest $request, string $organization, string $user_id)
+    public function update(UpdateOrganizationMemberRequest $request, string $organization, string $user_id)
     {
         $organization = Organization::findOrFail($organization);
         $this->authorize('update', $organization);

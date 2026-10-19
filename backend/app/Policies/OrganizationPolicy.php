@@ -41,7 +41,7 @@ class OrganizationPolicy
             return true;
         }
         if ($user->system_role === 'teacher') {
-            return $model->members()->where('users.id', $user->id)->exists();
+            return $model->members()->whereKey($user->id)->wherePivot('role', 'teacher')->exists();
         }
         return false;
     }
@@ -55,7 +55,7 @@ class OrganizationPolicy
             return true;
         }
         if ($user->system_role === 'teacher') {
-            return $model->members()->where('users.id', $user->id)->exists();
+            return $model->members()->whereKey($user->id)->wherePivot('role', 'teacher')->exists();
         }
         return false;
     }

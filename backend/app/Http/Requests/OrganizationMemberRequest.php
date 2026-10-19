@@ -13,7 +13,7 @@ class OrganizationMemberRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'uuid', 'exists:users,id'],
-            'role' => ['required', 'string', Rule::in(['member', 'administrator', 'president', 'coordinator'])],
+            'role' => ['required', 'string', Rule::in(['member', 'representative', 'teacher'])],
         ];
     }
 }
