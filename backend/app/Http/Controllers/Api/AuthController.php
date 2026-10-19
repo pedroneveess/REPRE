@@ -68,8 +68,10 @@ class AuthController extends Controller
     public function resetPassword(ResetPasswordRequest $request)
     {
         $status = Password::reset($request->validated(), function (User $user, string $password) {
-            $user->forceFill(['password' => Hash::make($password)])->save();
-            $user->tokens()->delete();
+            DB::transaction(function () use ($user, $password) {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+                $user->tokens()->delete();
+            });
         });
         if ($status !== Password::PASSWORD_RESET) {
             return response()->json(['message' => 'Nao foi possivel redefinir a senha.'], 422);
@@ -81,9 +83,7 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'message' => 'Logout realizado com sucesso.',
-        ]);
+        return response()->json(null, 204);
     }
 
     public function updateUser(UpdateProfileRequest $request)
