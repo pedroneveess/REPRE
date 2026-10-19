@@ -4,48 +4,46 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\OrganizationMemberRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\UserResource;
 
 class OrganizationMemberController extends Controller
 {
     private const ROLES = ['member', 'administrator', 'president', 'coordinator'];
 
-    public function index(string $organizationId)
+    public function index(PaginationRequest $request, string $organization)
     {
-        $organization = Organization::findOrFail($organizationId);
+        $organization = Organization::findOrFail($organization);
         $this->authorize('view', $organization);
-        return response()->json(['members' => $organization->members()->withPivot('role')->get()]);
+        return UserResource::collection($organization->members()->withPivot('role')->paginate($request->perPage()));
     }
 
-    public function store(Request $request, string $organizationId)
+    public function store(OrganizationMemberRequest $request, string $organization)
     {
-        $organization = Organization::findOrFail($organizationId);
+        $organization = Organization::findOrFail($organization);
         $this->authorize('update', $organization);
-        $data = $request->validate([
-            'user_id' => ['required', 'uuid', 'exists:users,id'],
-            'role' => ['required', 'string', Rule::in(self::ROLES)],
-        ]);
+        $data = $request->validated();
         $organization->members()->syncWithoutDetaching([$data['user_id'] => ['role' => $data['role']]]);
-        return response()->json(['members' => $organization->members()->withPivot('role')->get()], 201);
+        return (new UserResource($organization->members()->withPivot('role')->find($data['user_id'])))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $organizationId, string $userId)
+    public function update(OrganizationMemberRequest $request, string $organization, string $user_id)
     {
-        $organization = Organization::findOrFail($organizationId);
+        $organization = Organization::findOrFail($organization);
         $this->authorize('update', $organization);
-        abort_unless($organization->members()->whereKey($userId)->exists(), 404);
-        $data = $request->validate(['role' => ['required', 'string', Rule::in(self::ROLES)]]);
-        $organization->members()->updateExistingPivot($userId, ['role' => $data['role']]);
-        return response()->json(['members' => $organization->members()->withPivot('role')->get()]);
+        abort_unless($organization->members()->whereKey($user_id)->exists(), 404);
+        $data = $request->validated();
+        $organization->members()->updateExistingPivot($user_id, ['role' => $data['role']]);
+        return new UserResource($organization->members()->withPivot('role')->find($user_id));
     }
 
-    public function destroy(string $organizationId, string $userId)
+    public function destroy(string $organization, string $user_id)
     {
-        $organization = Organization::findOrFail($organizationId);
+        $organization = Organization::findOrFail($organization);
         $this->authorize('update', $organization);
-        abort_unless($organization->members()->whereKey($userId)->exists(), 404);
-        $organization->members()->detach($userId);
+        abort_unless($organization->members()->whereKey($user_id)->exists(), 404);
+        $organization->members()->detach($user_id);
         return response()->json(null, 204);
     }
 }

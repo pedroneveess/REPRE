@@ -6,15 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     private const SYSTEM_ROLES = ['student', 'representative', 'teacher', 'coordinator', 'admin'];
 
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', User::class);
         $user = request()->user();
@@ -26,21 +29,16 @@ class UserController extends Controller
                     ->orWhereHas('organizations.members', fn ($members) => $members->where('users.id', $user->id));
             });
         }
-        return response()->json(['users' => $query->get()]);
+        return UserResource::collection($query->paginate($request->perPage()));
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
         $this->authorize('create', User::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'birthdate' => ['required', 'date'],
-            'system_role' => ['required', 'string', Rule::in(self::SYSTEM_ROLES)],
-        ]);
+        $validated = $request->validated();
         $validated['password'] = Hash::make(Str::random(48));
         $user = User::create($validated);
-        return response()->json(['user' => $user], 201);
+        return (new UserResource($user))->response()->setStatusCode(201);
     }
 
     public function show(string $id)
@@ -48,22 +46,17 @@ class UserController extends Controller
         $user = User::find($id);
         abort_unless($user, 404, 'Usuario nao encontrado.');
         $this->authorize('view', $user);
-        return response()->json(['user' => $user]);
+        return new UserResource($user);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateUserRequest $request, string $id)
     {
         $user = User::find($id);
         abort_unless($user, 404, 'Usuario nao encontrado.');
         $this->authorize('update', $user);
-        $validated = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:150'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'birthdate' => ['sometimes', 'required', 'date'],
-            'system_role' => ['sometimes', 'required', 'string', Rule::in(self::SYSTEM_ROLES)],
-        ]);
+        $validated = $request->validated();
         $user->update($validated);
-        return response()->json(['user' => $user->fresh()]);
+        return new UserResource($user->fresh());
     }
 
     public function destroy(string $id)

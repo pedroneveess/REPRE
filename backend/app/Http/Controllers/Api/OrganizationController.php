@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreOrganizationRequest;
+use App\Http\Requests\UpdateOrganizationRequest;
+use App\Http\Resources\OrganizationResource;
+use App\Http\Requests\PaginationRequest;
 
 class OrganizationController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', Organization::class);
         $user = auth()->user();
@@ -18,7 +21,7 @@ class OrganizationController extends Controller
         } elseif (!in_array($user->system_role, ['admin', 'coordinator'], true)) {
             $query->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
         }
-        return response()->json(['organizations' => $query->get()]);
+        return OrganizationResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -26,33 +29,25 @@ class OrganizationController extends Controller
         $organization = Organization::with('members', 'posts')->find($id);
         abort_unless($organization, 404, 'Organização não encontrada.');
         $this->authorize('view', $organization);
-        return response()->json(['organization' => $organization]);
+        return new OrganizationResource($organization);
     }
 
-    public function store(Request $request)
+    public function store(StoreOrganizationRequest $request)
     {
         $this->authorize('create', Organization::class);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'description' => ['required', 'string'],
-            'type' => ['sometimes', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
         $organization = Organization::create($validated);
         $organization->members()->attach($request->user()->id, ['role' => 'administrator']);
-        return response()->json(['message' => 'Organização criada com sucesso.', 'organization' => $organization->load('members')], 201);
+        return (new OrganizationResource($organization->load('members')))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateOrganizationRequest $request, string $id)
     {
         $organization = Organization::find($id);
         abort_unless($organization, 404, 'Organização não encontrada.');
         $this->authorize('update', $organization);
-        $organization->update($request->validate([
-            'name' => ['sometimes', 'string', 'max:150'],
-            'description' => ['sometimes', 'string'],
-            'type' => ['sometimes', 'string', 'max:50'],
-        ]));
-        return response()->json(['message' => 'Organização atualizada com sucesso.', 'organization' => $organization->fresh()]);
+        $organization->update($request->validated());
+        return new OrganizationResource($organization->fresh());
     }
 
     public function destroy(string $id)

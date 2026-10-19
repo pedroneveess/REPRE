@@ -11,6 +11,7 @@ use App\Models\SchoolClass;
 use App\Models\Task;
 use App\Models\TaskCompletion;
 use App\Models\User;
+use App\Http\Resources\DashboardResource;
 
 class DashboardController extends Controller
 {
@@ -18,7 +19,7 @@ class DashboardController extends Controller
     {
         $this->authorize('viewGlobalDashboard', User::class);
 
-        return response()->json([
+        return new DashboardResource([
             'summary' => [
                 'users' => User::count(),
                 'classes' => SchoolClass::count(),

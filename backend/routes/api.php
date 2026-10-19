@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\SchoolClassesController;
+use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TaskCompletionController;
 use App\Http\Controllers\Api\AnnouncementController;
@@ -14,43 +14,43 @@ use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DashboardController;
 
-Route::post('/signUp', [AuthController::class, 'createUser']);
+Route::post('/auth/register', [AuthController::class, 'createUser']);
 
-Route::post('/signIn', [AuthController::class, 'userLogin']);
+Route::post('/auth/login', [AuthController::class, 'userLogin']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/loggedUser', [AuthController::class, 'loggedUser']);
+    Route::get('/auth/me', [AuthController::class, 'loggedUser']);
 
-    Route::put('/updateUser', [AuthController::class, 'updateUser']);
+    Route::put('/auth/me', [AuthController::class, 'updateUser']);
 
-    Route::delete('/deleteUser', [AuthController::class, 'deleteUser']);
+    Route::delete('/auth/me', [AuthController::class, 'deleteUser']);
 
-    Route::post('/logoutUser', [AuthController::class, 'logoutUser']);
+    Route::post('/auth/logout', [AuthController::class, 'logoutUser']);
 
-    Route::apiResource('/school_classes', SchoolClassesController::class)->where(['school_class' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/school-classes', SchoolClassController::class)->whereUuid('school_class');
 
-    Route::apiResource('/tasks', TaskController::class)->where(['task' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/tasks', TaskController::class)->whereUuid('task');
 
-    Route::apiResource('/task_completions', TaskCompletionController::class)->where(['task_completion' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/task-completions', TaskCompletionController::class)->whereUuid('task_completion');
 
-    Route::apiResource('/announcements', AnnouncementController::class)->where(['announcement' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/announcements', AnnouncementController::class)->whereUuid('announcement');
 
-    Route::apiResource('/organizations', OrganizationController::class)->where(['organization' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/organizations', OrganizationController::class)->whereUuid('organization');
 
-    Route::apiResource('/posts', PostController::class)->where(['post' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/posts', PostController::class)->whereUuid('post');
 
-    Route::get('/school_classes/{classId}/members', [ClassMemberController::class, 'index'])->whereUuid('classId');
-    Route::post('/school_classes/{classId}/members', [ClassMemberController::class, 'store'])->whereUuid('classId');
-    Route::patch('/school_classes/{classId}/members/{userId}', [ClassMemberController::class, 'update'])->whereUuid(['classId', 'userId']);
-    Route::delete('/school_classes/{classId}/members/{userId}', [ClassMemberController::class, 'destroy'])->whereUuid(['classId', 'userId']);
+    Route::get('/school-classes/{school_class}/members', [ClassMemberController::class, 'index'])->whereUuid('school_class');
+    Route::post('/school-classes/{school_class}/members', [ClassMemberController::class, 'store'])->whereUuid('school_class');
+    Route::patch('/school-classes/{school_class}/members/{user_id}', [ClassMemberController::class, 'update'])->whereUuid(['school_class', 'user_id']);
+    Route::delete('/school-classes/{school_class}/members/{user_id}', [ClassMemberController::class, 'destroy'])->whereUuid(['school_class', 'user_id']);
 
-    Route::get('/organizations/{organizationId}/members', [OrganizationMemberController::class, 'index'])->whereUuid('organizationId');
-    Route::post('/organizations/{organizationId}/members', [OrganizationMemberController::class, 'store'])->whereUuid('organizationId');
-    Route::patch('/organizations/{organizationId}/members/{userId}', [OrganizationMemberController::class, 'update'])->whereUuid(['organizationId', 'userId']);
-    Route::delete('/organizations/{organizationId}/members/{userId}', [OrganizationMemberController::class, 'destroy'])->whereUuid(['organizationId', 'userId']);
+    Route::get('/organizations/{organization}/members', [OrganizationMemberController::class, 'index'])->whereUuid('organization');
+    Route::post('/organizations/{organization}/members', [OrganizationMemberController::class, 'store'])->whereUuid('organization');
+    Route::patch('/organizations/{organization}/members/{user_id}', [OrganizationMemberController::class, 'update'])->whereUuid(['organization', 'user_id']);
+    Route::delete('/organizations/{organization}/members/{user_id}', [OrganizationMemberController::class, 'destroy'])->whereUuid(['organization', 'user_id']);
 
-    Route::apiResource('/calendar_events', CalendarEventController::class)->where(['calendar_event' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
-    Route::apiResource('/users', UserController::class)->where(['user' => '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}']);
+    Route::apiResource('/calendar-events', CalendarEventController::class)->whereUuid('calendar_event');
+    Route::apiResource('/users', UserController::class)->whereUuid('user');
     Route::get('/dashboard', [DashboardController::class, 'show']);
 });

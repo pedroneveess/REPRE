@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreTaskCompletionRequest;
+use App\Http\Requests\UpdateTaskCompletionRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\TaskCompletionResource;
 use App\Models\TaskCompletion;
 use App\Models\Task;
 use App\Models\User;
@@ -11,7 +14,7 @@ use App\Policies\TaskCompletionPolicy;
 
 class TaskCompletionController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', TaskCompletion::class);
 
@@ -28,11 +31,7 @@ class TaskCompletionController extends Controller
                 $query->where('user_id', $user->id);
             }
         }
-        $completions = $query->get();
-
-        return response()->json([
-            'task_completions' => $completions
-        ], 200);
+        return TaskCompletionResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -47,18 +46,14 @@ class TaskCompletionController extends Controller
 
         $this->authorize('view', $completion);
 
-        return response()->json([
-            'task_completion' => $completion
-        ], 200);
+        return new TaskCompletionResource($completion);
     }
 
-    public function store(Request $request)
+    public function store(StoreTaskCompletionRequest $request)
     {
         $this->authorize('create', TaskCompletion::class);
 
-        $validated = $request->validate([
-            'task_id' => ['required', 'uuid', 'exists:tasks,id'],
-        ]);
+        $validated = $request->validated();
 
         $user = $request->user();
 
@@ -78,13 +73,10 @@ class TaskCompletionController extends Controller
             'completed_at' => now(),
         ]);
 
-        return response()->json([
-            'message' => 'Tarefa marcada como conclu�da.',
-            'task_completion' => $completion
-        ], 201);
+        return (new TaskCompletionResource($completion))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateTaskCompletionRequest $request, string $id)
     {
         $completion = TaskCompletion::find($id);
 
@@ -96,16 +88,11 @@ class TaskCompletionController extends Controller
 
         $this->authorize('update', $completion);
 
-        $validated = $request->validate([
-            'completed_at' => ['sometimes', 'date'],
-        ]);
+        $validated = $request->validated();
 
         $completion->update($validated);
 
-        return response()->json([
-            'message' => 'Conclus�o atualizada com sucesso.',
-            'task_completion' => $completion->fresh()
-        ], 200);
+        return new TaskCompletionResource($completion->fresh());
     }
 
     public function destroy(string $id)

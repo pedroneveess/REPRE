@@ -3,31 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\SchoolClass;
-use App\Models\User;
-use App\Policies\TaskPolicy;
+use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\TaskResource;
 
 class TaskController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', Task::class);
 
         $user = auth()->user();
-        $query = Task::with('schoolClass', 'creator', 'completions.user');
+        $query = Task::with('schoolClass', 'creator');
 
         if (!in_array($user->system_role, ['coordinator', 'admin'])) {
             $query->whereHas('schoolClass.members', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
         }
-        $tasks = $query->get();
-
-        return response()->json([
-            'tasks' => $tasks
-        ], 200);
+        return TaskResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -42,22 +39,14 @@ class TaskController extends Controller
 
         $this->authorize('view', $task);
 
-        return response()->json([
-            'task' => $task
-        ], 200);
+        return new TaskResource($task);
     }
 
-    public function store(Request $request)
+    public function store(StoreTaskRequest $request)
     {
         $this->authorize('create', Task::class);
 
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:100'],
-            'description' => ['sometimes', 'string', 'nullable'],
-            'priority' => ['sometimes', 'string', 'in:low,medium,high'],
-            'due_date' => ['required', 'date'],
-            'class_id' => ['required', 'uuid', 'exists:school_classes,id'],
-        ]);
+        $validated = $request->validated();
 
         $validated['created_by'] = $request->user()->id;
 
@@ -76,13 +65,10 @@ class TaskController extends Controller
 
         $task = Task::create($validated);
 
-        return response()->json([
-            'message' => 'Tarefa criada com sucesso.',
-            'task' => $task
-        ], 201);
+        return (new TaskResource($task))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateTaskRequest $request, string $id)
     {
         $task = Task::find($id);
 
@@ -94,19 +80,11 @@ class TaskController extends Controller
 
         $this->authorize('update', $task);
 
-        $validated = $request->validate([
-            'title' => ['sometimes', 'string', 'max:100'],
-            'description' => ['sometimes', 'string', 'nullable'],
-            'priority' => ['sometimes', 'string', 'in:low,medium,high'],
-            'due_date' => ['sometimes', 'date'],
-        ]);
+        $validated = $request->validated();
 
         $task->update($validated);
 
-        return response()->json([
-            'message' => 'Tarefa atualizada com sucesso.',
-            'task' => $task->fresh()
-        ], 200);
+        return new TaskResource($task->fresh());
     }
 
     public function destroy(string $id)

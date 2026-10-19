@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreAnnouncementRequest;
+use App\Http\Requests\UpdateAnnouncementRequest;
+use App\Http\Resources\AnnouncementResource;
+use App\Http\Requests\PaginationRequest;
 
 class AnnouncementController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', Announcement::class);
         $user = auth()->user();
@@ -20,7 +23,7 @@ class AnnouncementController extends Controller
             $query->whereHas('schoolClass.members', fn ($q) => $q->where('users.id', $user->id));
         }
 
-        return response()->json(['announcements' => $query->get()]);
+        return AnnouncementResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -28,34 +31,28 @@ class AnnouncementController extends Controller
         $announcement = Announcement::with('schoolClass', 'creator')->find($id);
         abort_unless($announcement, 404, 'Aviso não encontrado.');
         $this->authorize('view', $announcement);
-        return response()->json(['announcement' => $announcement]);
+        return new AnnouncementResource($announcement);
     }
 
-    public function store(Request $request)
+    public function store(StoreAnnouncementRequest $request)
     {
         $this->authorize('create', Announcement::class);
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:200'],
-            'content' => ['required', 'string'],
-            'class_id' => ['required', 'uuid', 'exists:school_classes,id'],
-        ]);
+        $validated = $request->validated();
+
         if ($request->user()->system_role === 'teacher' && !$request->user()->schoolClasses()->whereKey($validated['class_id'])->exists()) {
             abort(403);
         }
         $validated['created_by'] = $request->user()->id;
-        return response()->json(['message' => 'Aviso criado com sucesso.', 'announcement' => Announcement::create($validated)], 201);
+        return (new AnnouncementResource(Announcement::create($validated)))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateAnnouncementRequest $request, string $id)
     {
         $announcement = Announcement::find($id);
         abort_unless($announcement, 404, 'Aviso não encontrado.');
         $this->authorize('update', $announcement);
-        $announcement->update($request->validate([
-            'title' => ['sometimes', 'string', 'max:200'],
-            'content' => ['sometimes', 'string'],
-        ]));
-        return response()->json(['message' => 'Aviso atualizado com sucesso.', 'announcement' => $announcement->fresh()]);
+        $announcement->update($request->validated());
+        return new AnnouncementResource($announcement->fresh());
     }
 
     public function destroy(string $id)

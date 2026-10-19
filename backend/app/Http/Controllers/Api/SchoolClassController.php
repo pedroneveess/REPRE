@@ -3,28 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\SchoolClass;
-use App\Policies\SchoolClassPolicy;
+use App\Http\Requests\StoreSchoolClassRequest;
+use App\Http\Requests\UpdateSchoolClassRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\SchoolClassResource;
 
-class SchoolClassesController extends Controller
+class SchoolClassController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', SchoolClass::class);
 
         $user = auth()->user();
-        $classes = SchoolClass::with('members', 'tasks', 'announcements')->get();
+        $query = SchoolClass::query();
 
         if (!in_array($user->system_role, ['coordinator', 'admin'])) {
-            $classes = $classes->filter(function ($class) use ($user) {
-                return $class->members->contains('id', $user->id);
-            })->values();
+            $query->whereHas('members', fn ($q) => $q->where('users.id', $user->id));
         }
-
-        return response()->json([
-            'school_classes' => $classes
-        ], 200);
+        return SchoolClassResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -39,21 +36,14 @@ class SchoolClassesController extends Controller
 
         $this->authorize('view', $schoolClass);
 
-        return response()->json([
-            'school_class' => $schoolClass
-        ], 200);
+        return new SchoolClassResource($schoolClass);
     }
 
-    public function store(Request $request)
+    public function store(StoreSchoolClassRequest $request)
     {
         $this->authorize('create', SchoolClass::class);
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'course' => ['required', 'string', 'max:100'],
-            'semester' => ['required', 'integer', 'between:1,8'],
-            'year' => ['required', 'integer', 'between:2000,' . date('Y')],
-        ]);
+        $validated = $request->validated();
 
         $schoolClass = SchoolClass::create($validated);
 
@@ -63,13 +53,10 @@ class SchoolClassesController extends Controller
             ]);
         }
 
-        return response()->json([
-            'message' => 'Turma criada com sucesso.',
-            'school_class' => $schoolClass
-        ], 201);
+        return (new SchoolClassResource($schoolClass))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateSchoolClassRequest $request, string $id)
     {
         $schoolClass = SchoolClass::find($id);
 
@@ -81,19 +68,11 @@ class SchoolClassesController extends Controller
 
         $this->authorize('update', $schoolClass);
 
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:100'],
-            'course' => ['sometimes', 'string', 'max:100'],
-            'semester' => ['sometimes', 'integer', 'between:1,8'],
-            'year' => ['sometimes', 'integer', 'between:2000'],
-        ]);
+        $validated = $request->validated();
 
         $schoolClass->update($validated);
 
-        return response()->json([
-            'message' => 'Turma atualizada com sucesso.',
-            'school_class' => $schoolClass->fresh()
-        ], 200);
+        return new SchoolClassResource($schoolClass->fresh());
     }
 
     public function destroy(string $id)

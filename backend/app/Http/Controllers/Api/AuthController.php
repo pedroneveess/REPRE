@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Requests\AuthRegisterRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\UpdateProfileRequest;
+use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
@@ -11,14 +15,9 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
 
-    public function createUser(Request $request)
+    public function createUser(AuthRegisterRequest $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'birthdate' => ['required', 'date'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
@@ -31,17 +30,14 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Usuario criado com sucesso ',
-            'user' => $user,
+            'user' => new UserResource($user),
             'token' => $token
         ], 201);
     }
 
-    public function userLogin(Request $request)
+    public function userLogin(LoginRequest $request)
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string']
-        ]);
+        $validated = $request->validated();
 
         $user = User::where('email', $validated['email'])->first();
 
@@ -55,7 +51,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login realizado com sucesso.',
-            'user' => $user,
+            'user' => new UserResource($user),
             'token' => $token,
         ]);
     }
@@ -69,21 +65,11 @@ class AuthController extends Controller
         ]);
     }
 
-    public function updateUser(Request $request)
+    public function updateUser(UpdateProfileRequest $request)
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:150'],
-            'birthdate' => ['sometimes', 'date'],
-            'email' => [
-                'sometimes',
-                'email',
-                'max:255',
-                'unique:users,email,' . $user->id,
-            ],
-            'password' => ['sometimes', 'string', 'min:8', 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
@@ -93,7 +79,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Dados atualizados com sucesso.',
-            'user' => $user->fresh(),
+            'user' => new UserResource($user->fresh()),
         ]);
     }
 
@@ -112,7 +98,7 @@ class AuthController extends Controller
     public function loggedUser(Request $request)
     {
         return response()->json([
-            'user' => $request->user(),
+            'user' => new UserResource($request->user()),
         ]);
     }
 }

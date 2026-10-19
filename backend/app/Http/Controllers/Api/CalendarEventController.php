@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreCalendarEventRequest;
+use App\Http\Requests\UpdateCalendarEventRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\CalendarEventResource;
 
 class CalendarEventController extends Controller
 {
-    public function index()
+    public function index(PaginationRequest $request)
     {
         $this->authorize('viewAny', CalendarEvent::class);
         $user = auth()->user();
@@ -18,7 +21,7 @@ class CalendarEventController extends Controller
                 $events->whereNull('class_id')->orWhereHas('schoolClass.members', fn ($members) => $members->where('users.id', $user->id));
             });
         }
-        return response()->json(['calendar_events' => $query->get()]);
+        return CalendarEventResource::collection($query->paginate($request->perPage()));
     }
 
     public function show(string $id)
@@ -26,19 +29,13 @@ class CalendarEventController extends Controller
         $event = CalendarEvent::with('schoolClass', 'creator')->find($id);
         abort_unless($event, 404, 'Evento nao encontrado.');
         $this->authorize('view', $event);
-        return response()->json(['calendar_event' => $event]);
+        return new CalendarEventResource($event);
     }
 
-    public function store(Request $request)
+    public function store(StoreCalendarEventRequest $request)
     {
         $this->authorize('create', CalendarEvent::class);
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:200'],
-            'description' => ['required', 'string'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:starts_at'],
-            'class_id' => ['sometimes', 'nullable', 'uuid', 'exists:school_classes,id'],
-        ]);
+        $validated = $request->validated();
         $user = $request->user();
         if ($user->system_role === 'teacher' && empty($validated['class_id'])) {
             abort(403);
@@ -47,21 +44,15 @@ class CalendarEventController extends Controller
             abort(403);
         }
         $validated['created_by'] = $user->id;
-        return response()->json(['calendar_event' => CalendarEvent::create($validated)], 201);
+        return (new CalendarEventResource(CalendarEvent::create($validated)))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateCalendarEventRequest $request, string $id)
     {
         $event = CalendarEvent::find($id);
         abort_unless($event, 404, 'Evento nao encontrado.');
         $this->authorize('update', $event);
-        $validated = $request->validate([
-            'title' => ['sometimes', 'string', 'max:200'],
-            'description' => ['sometimes', 'string'],
-            'starts_at' => ['sometimes', 'date'],
-            'ends_at' => ['sometimes', 'nullable', 'date'],
-            'class_id' => ['sometimes', 'nullable', 'uuid', 'exists:school_classes,id'],
-        ]);
+        $validated = $request->validated();
         if (array_key_exists('class_id', $validated) && $request->user()->system_role === 'teacher') {
             if (empty($validated['class_id']) || !$request->user()->schoolClasses()->whereKey($validated['class_id'])->exists()) {
                 abort(403);
@@ -79,7 +70,7 @@ class CalendarEventController extends Controller
             ])->validate();
         }
         $event->update($validated);
-        return response()->json(['calendar_event' => $event->fresh()]);
+        return new CalendarEventResource($event->fresh());
     }
 
     public function destroy(string $id)

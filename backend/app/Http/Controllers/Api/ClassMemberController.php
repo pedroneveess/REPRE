@@ -4,48 +4,46 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SchoolClass;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\MemberRequest;
+use App\Http\Requests\PaginationRequest;
+use App\Http\Resources\UserResource;
 
 class ClassMemberController extends Controller
 {
     private const ROLES = ['student', 'representative', 'teacher'];
 
-    public function index(string $classId)
+    public function index(PaginationRequest $request, string $school_class)
     {
-        $class = SchoolClass::findOrFail($classId);
+        $class = SchoolClass::findOrFail($school_class);
         $this->authorize('view', $class);
-        return response()->json(['members' => $class->members()->withPivot('role')->get()]);
+        return UserResource::collection($class->members()->withPivot('role')->paginate($request->perPage()));
     }
 
-    public function store(Request $request, string $classId)
+    public function store(MemberRequest $request, string $school_class)
     {
-        $class = SchoolClass::findOrFail($classId);
+        $class = SchoolClass::findOrFail($school_class);
         $this->authorize('update', $class);
-        $data = $request->validate([
-            'user_id' => ['required', 'uuid', 'exists:users,id'],
-            'role' => ['required', 'string', Rule::in(self::ROLES)],
-        ]);
+        $data = $request->validated();
         $class->members()->syncWithoutDetaching([$data['user_id'] => ['role' => $data['role']]]);
-        return response()->json(['members' => $class->members()->withPivot('role')->get()], 201);
+        return (new UserResource($class->members()->withPivot('role')->find($data['user_id'])))->response()->setStatusCode(201);
     }
 
-    public function update(Request $request, string $classId, string $userId)
+    public function update(MemberRequest $request, string $school_class, string $user_id)
     {
-        $class = SchoolClass::findOrFail($classId);
+        $class = SchoolClass::findOrFail($school_class);
         $this->authorize('update', $class);
-        abort_unless($class->members()->whereKey($userId)->exists(), 404);
-        $data = $request->validate(['role' => ['required', 'string', Rule::in(self::ROLES)]]);
-        $class->members()->updateExistingPivot($userId, ['role' => $data['role']]);
-        return response()->json(['members' => $class->members()->withPivot('role')->get()]);
+        abort_unless($class->members()->whereKey($user_id)->exists(), 404);
+        $data = $request->validated();
+        $class->members()->updateExistingPivot($user_id, ['role' => $data['role']]);
+        return new UserResource($class->members()->withPivot('role')->find($user_id));
     }
 
-    public function destroy(string $classId, string $userId)
+    public function destroy(string $school_class, string $user_id)
     {
-        $class = SchoolClass::findOrFail($classId);
+        $class = SchoolClass::findOrFail($school_class);
         $this->authorize('update', $class);
-        abort_unless($class->members()->whereKey($userId)->exists(), 404);
-        $class->members()->detach($userId);
+        abort_unless($class->members()->whereKey($user_id)->exists(), 404);
+        $class->members()->detach($user_id);
         return response()->json(null, 204);
     }
 }
