@@ -37,6 +37,8 @@ Diretrizes para agentes neste repositório.
 
 ## Regras desta etapa
 
+- Não escreva comentários em código novo. Não remova, edite nem reformate comentários que já existem no repositório, inclusive os que acompanham o Laravel.
+
 - Estas regras prevalecem sobre as seções 1, 3 e 4 quando houver conflito.
 - Faça perguntas somente sobre negócio; não crie relatórios nem leia ou escreva `maestri/` ou `.maestri/`.
 - Fase2 não executa suíte; padronização é permitida e separada das funcionalidades.
@@ -56,4 +58,3 @@ Diretrizes para agentes neste repositório.
 - Models usam PascalCase singular; tabelas snake_case plural; IDs e FKs UUID.
 - Use `date` para nascimento, `starts_on` e `ends_on`; prazo, evento e `completed_at` usam timestamps consistentes.
 - Policies têm métodos Laravel que retornam bool.
-- Não adicione comentários ao código API, incluindo comentários herdados; essa regra não se aplica a frontend ou vendor.
