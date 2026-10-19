@@ -11,6 +11,8 @@ use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 
 class AuthController extends Controller
 {
@@ -87,8 +89,17 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        $user->tokens()->delete();
-        $user->delete();
+        try {
+            DB::transaction(function () use ($user) {
+                $user->tokens()->delete();
+                $user->delete();
+            });
+        } catch (QueryException $exception) {
+            if ($exception->getCode() === '23503') {
+                return response()->json(['message' => 'Conta possui registros vinculados.'], 409);
+            }
+            throw $exception;
+        }
 
         return response()->json([
             'message' => 'Conta excluída com sucesso.',
