@@ -15,6 +15,8 @@ class StoreSchoolClassRequest extends FormRequest
             'course' => ['required', 'string', 'max:100'],
             'semester' => ['required', 'integer'],
             'year' => ['required', 'integer'],
+            'starts_on' => ['required', 'date'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
         ];
     }
 }

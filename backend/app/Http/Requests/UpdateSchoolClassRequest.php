@@ -15,6 +15,8 @@ class UpdateSchoolClassRequest extends FormRequest
             'course' => ['sometimes', 'string', 'max:100'],
             'semester' => ['sometimes', 'integer'],
             'year' => ['sometimes', 'integer'],
+            'starts_on' => ['sometimes', 'date'],
+            'ends_on' => ['sometimes', 'date'],
         ];
     }
 }

@@ -16,11 +16,15 @@ class SchoolClass extends Model
         'course',
         'semester',
         'year',
+        'starts_on',
+        'ends_on',
     ];
 
     protected $casts = [
         'semester' => 'integer',
         'year'=> 'integer',
+        'starts_on' => 'date',
+        'ends_on' => 'date',
     ];
 
     public function members(){

@@ -8,6 +8,7 @@ use App\Http\Requests\StoreSchoolClassRequest;
 use App\Http\Requests\UpdateSchoolClassRequest;
 use App\Http\Requests\PaginationRequest;
 use App\Http\Resources\SchoolClassResource;
+use Carbon\Carbon;
 
 class SchoolClassController extends Controller
 {
@@ -69,6 +70,11 @@ class SchoolClassController extends Controller
         $this->authorize('update', $schoolClass);
 
         $validated = $request->validated();
+        $startsOn = $validated['starts_on'] ?? $schoolClass->starts_on;
+        $endsOn = $validated['ends_on'] ?? $schoolClass->ends_on;
+        if ($startsOn && $endsOn && Carbon::parse($endsOn)->lt(Carbon::parse($startsOn))) {
+            return response()->json(['message' => 'A data final deve ser igual ou posterior a inicial.'], 422);
+        }
 
         $schoolClass->update($validated);
 
