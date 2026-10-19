@@ -22,12 +22,16 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
         $user = request()->user();
         $query = User::query();
-        if (!in_array($user->system_role, ['admin', 'coordinator'], true)) {
+        if ($user->system_role === 'admin') {
+            return UserResource::collection($query->paginate($request->perPage()));
+        }
+        if ($user->system_role === 'teacher') {
             $query->where(function ($users) use ($user) {
                 $users->whereKey($user->id)
-                    ->orWhereHas('schoolClasses.members', fn ($members) => $members->where('users.id', $user->id))
-                    ->orWhereHas('organizations.members', fn ($members) => $members->where('users.id', $user->id));
+                    ->orWhereHas('schoolClasses', fn ($classes) => $classes->wherePivot('role', 'teacher')->whereHas('members', fn ($members) => $members->where('users.id', $user->id)));
             });
+        } else {
+            $query->whereKey($user->id);
         }
         return UserResource::collection($query->paginate($request->perPage()));
     }

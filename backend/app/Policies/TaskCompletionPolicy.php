@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\TaskCompletion;
 use App\Models\User;
+use App\Models\Task;
 use Illuminate\Auth\Access\Response;
 
 class TaskCompletionPolicy
@@ -33,12 +34,14 @@ class TaskCompletionPolicy
         return false;
     }
 
-    public function create(?User $user): bool
+    public function create(?User $user, Task $task): bool
     {
         if (!$user) {
             return false;
         }
-        return in_array($user->system_role, ['student', 'representative', 'teacher'], true);
+        return $user->system_role === 'admin'
+            || (in_array($user->system_role, ['student', 'representative', 'teacher'], true)
+                && $task->schoolClass->members()->whereKey($user->id)->exists());
     }
 
     public function update(?User $user, TaskCompletion $model): bool

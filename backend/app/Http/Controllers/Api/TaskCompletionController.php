@@ -22,14 +22,13 @@ class TaskCompletionController extends Controller
 
         $query = TaskCompletion::with('user', 'task');
 
-        if (!in_array($user->system_role, ['coordinator', 'admin'])) {
-            if ($user->system_role === 'teacher') {
-                $query->whereHas('task.schoolClass.members', function ($q) use ($user) {
-                    $q->where('users.id', $user->id);
-                });
-            } else {
-                $query->where('user_id', $user->id);
-            }
+        if ($user->system_role === 'admin') {
+            return TaskCompletionResource::collection($query->paginate($request->perPage()));
+        }
+        if ($user->system_role === 'teacher') {
+            $query->whereHas('task.schoolClass.members', fn ($q) => $q->whereKey($user->id)->wherePivot('role', 'teacher'));
+        } else {
+            $query->where('user_id', $user->id);
         }
         return TaskCompletionResource::collection($query->paginate($request->perPage()));
     }
@@ -54,7 +53,8 @@ class TaskCompletionController extends Controller
         $validated = $request->validated();
         $user = $request->user();
         $task = Task::with('schoolClass')->findOrFail($validated['task_id']);
-        abort_unless($task->schoolClass->members()->whereKey($user->id)->exists(), 403);
+        $this->authorize('create', [TaskCompletion::class, $task]);
+        abort_unless($user->system_role === 'admin' || $task->schoolClass->members()->whereKey($user->id)->exists(), 403);
         $completion = TaskCompletion::create([
             'user_id' => $user->id,
             'task_id' => $task->id,
