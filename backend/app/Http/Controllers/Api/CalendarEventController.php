@@ -57,7 +57,7 @@ class CalendarEventController extends Controller
         $this->authorize('update', $event);
         $validated = $request->validated();
         if (array_key_exists('class_id', $validated) && $request->user()->system_role === 'teacher') {
-            if (empty($validated['class_id']) || !$request->user()->schoolClasses()->whereKey($validated['class_id'])->exists()) {
+            if (empty($validated['class_id']) || !$request->user()->schoolClasses()->whereKey($validated['class_id'])->wherePivot('role', 'teacher')->exists()) {
                 abort(403);
             }
         }
