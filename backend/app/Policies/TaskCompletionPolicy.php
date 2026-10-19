@@ -21,15 +21,13 @@ class TaskCompletionPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        if ($user->system_role === 'coordinator') {
-            return true;
-        }
         if ($model->user_id === $user->id) {
             return true;
         }
         if ($user->system_role === 'teacher') {
             return $model->task->schoolClass->members()
-                ->where('users.id', $user->id)
+                ->whereKey($user->id)
+                ->wherePivot('role', 'teacher')
                 ->exists();
         }
         return false;
@@ -40,7 +38,7 @@ class TaskCompletionPolicy
         if (!$user) {
             return false;
         }
-        return $user->system_role !== 'coordinator';
+        return in_array($user->system_role, ['student', 'representative', 'teacher'], true);
     }
 
     public function update(?User $user, TaskCompletion $model): bool

@@ -12,9 +12,9 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'email' => $this->email,
+            'email' => $this->when($request->user()?->is($this->resource) || $request->user()?->system_role === 'admin', $this->email),
             'system_role' => $this->system_role,
-            'birthdate' => $this->birthdate?->toDateString(),
+            'birthdate' => $this->when($request->user()?->is($this->resource) || $request->user()?->system_role === 'admin', $this->birthdate?->toDateString()),
             'role' => $this->when(isset($this->pivot), fn () => $this->pivot->role),
         ];
     }

@@ -25,14 +25,11 @@ class UserPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        if ($user->system_role === 'coordinator') {
-            return true;
-        }
         if ($user->id === $model->id) {
             return true;
         }
-        return $user->schoolClasses()->whereHas('members', fn ($members) => $members->where('users.id', $model->id))->exists()
-            || $user->organizations()->whereHas('members', fn ($members) => $members->where('users.id', $model->id))->exists();
+        return $user->system_role === 'teacher'
+            && $user->schoolClasses()->wherePivot('role', 'teacher')->whereHas('members', fn ($members) => $members->where('users.id', $model->id))->exists();
     }
 
     public function create(?User $user): bool
