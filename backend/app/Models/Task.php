@@ -21,8 +21,7 @@ class Task extends Model
     ];
 
     protected $casts = [
-        'semester' => 'integer',
-        'year'=> 'integer',
+        'due_date' => 'datetime',
     ];
 
     public function schoolClass(){

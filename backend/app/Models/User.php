@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use DateTime;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Model
 {
-    use HasFactory, HasUuids, HasApiTokens;
+    use HasFactory, HasUuids, HasApiTokens, Notifiable;
 
     protected $fillable = [
         'name',
@@ -21,7 +21,7 @@ class User extends Model
         ];
 
     protected $casts = [
-        'birthdate' => 'datetime',
+        'birthdate' => 'date',
         'password' => 'hashed',
     ];    
 
@@ -34,7 +34,7 @@ class User extends Model
     }
 
     public function taskCompletions(){
-        return $this->belongsToMany(Task::class, 'task_completions');
+        return $this->hasMany(TaskCompletion::class, 'user_id');
     }
 
     public function organizations(){
