@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logoutUser']);
 
     Route::apiResource('/school-classes', SchoolClassController::class)->whereUuid('school_class');
+    Route::get('/school-classes/{school_class}/performance', [SchoolClassController::class, 'performance'])->whereUuid('school_class');
 
     Route::apiResource('/tasks', TaskController::class)->whereUuid('task');
 

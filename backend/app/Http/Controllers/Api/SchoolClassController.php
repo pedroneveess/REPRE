@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateSchoolClassRequest;
 use App\Http\Requests\PaginationRequest;
 use App\Http\Resources\SchoolClassResource;
 use Carbon\Carbon;
+use App\Http\Resources\SchoolClassPerformanceResource;
 
 class SchoolClassController extends Controller
 {
@@ -38,6 +39,20 @@ class SchoolClassController extends Controller
         $this->authorize('view', $schoolClass);
 
         return new SchoolClassResource($schoolClass);
+    }
+
+    public function performance(PaginationRequest $request, string $school_class)
+    {
+        $schoolClass = SchoolClass::findOrFail($school_class);
+        $user = $request->user();
+        $allowed = $user->system_role === 'admin'
+            || ($user->system_role === 'teacher' && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists());
+        abort_unless($allowed, 403);
+        $taskIds = $schoolClass->tasks()->select('id');
+        $students = $schoolClass->members()->wherePivot('role', 'student')->select('users.id', 'users.name')
+            ->selectSub($taskIds->selectRaw('count(*)'), 'tasks_total')
+            ->selectSub($schoolClass->tasks()->join('task_completions', 'tasks.id', '=', 'task_completions.task_id')->whereColumn('task_completions.user_id', 'users.id')->selectRaw('count(*)'), 'completions_total');
+        return SchoolClassPerformanceResource::collection($students->paginate($request->perPage()));
     }
 
     public function store(StoreSchoolClassRequest $request)
