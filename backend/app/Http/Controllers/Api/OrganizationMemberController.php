@@ -17,7 +17,12 @@ class OrganizationMemberController extends Controller
     {
         $organization = Organization::findOrFail($organization);
         $this->authorize('view', $organization);
-        return UserResource::collection($organization->members()->withPivot('role')->paginate($request->perPage()));
+        $members = $organization->members()->withPivot('role');
+        $user = $request->user();
+        if ($user->system_role !== 'admin' && !($user->system_role === 'teacher' && $organization->members()->whereKey($user->id)->where('organization_members.role', 'teacher')->exists())) {
+            $members->whereKey($user->id);
+        }
+        return UserResource::collection($members->paginate($request->perPage()));
     }
 
     public function store(OrganizationMemberRequest $request, string $organization)

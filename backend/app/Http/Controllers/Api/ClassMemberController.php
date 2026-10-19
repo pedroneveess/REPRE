@@ -17,7 +17,12 @@ class ClassMemberController extends Controller
     {
         $class = SchoolClass::findOrFail($school_class);
         $this->authorize('view', $class);
-        return UserResource::collection($class->members()->withPivot('role')->paginate($request->perPage()));
+        $members = $class->members()->withPivot('role');
+        $user = $request->user();
+        if ($user->system_role !== 'admin' && !($user->system_role === 'teacher' && $class->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists())) {
+            $members->whereKey($user->id);
+        }
+        return UserResource::collection($members->paginate($request->perPage()));
     }
 
     public function store(MemberRequest $request, string $school_class)

@@ -26,9 +26,14 @@ class UserController extends Controller
             return UserResource::collection($query->paginate($request->perPage()));
         }
         if ($user->system_role === 'teacher') {
+            $classIds = $user->schoolClasses()
+                ->wherePivot('role', 'teacher')
+                ->select('school_classes.id');
             $query->where(function ($users) use ($user) {
                 $users->whereKey($user->id)
-                    ->orWhereHas('schoolClasses', fn ($classes) => $classes->wherePivot('role', 'teacher')->whereHas('members', fn ($members) => $members->where('users.id', $user->id)));
+                    ->orWhereHas('schoolClasses.members', fn ($members) => $members->where('users.id', $user->id));
+            })->whereHas('schoolClasses', function ($classes) use ($classIds) {
+                $classes->whereIn('school_classes.id', $classIds);
             });
         } else {
             $query->whereKey($user->id);
@@ -71,7 +76,7 @@ class UserController extends Controller
         try {
             $user->delete();
         } catch (QueryException $exception) {
-            if (in_array($exception->getCode(), ['23503', '23000'], true)) {
+            if ($exception->getCode() === '23503') {
                 return response()->json(['message' => 'Usuario possui registros vinculados.'], 409);
             }
             throw $exception;

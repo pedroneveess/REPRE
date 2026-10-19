@@ -11,6 +11,8 @@ use App\Models\TaskCompletion;
 use App\Models\Task;
 use App\Models\User;
 use App\Policies\TaskCompletionPolicy;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class TaskCompletionController extends Controller
 {
@@ -55,11 +57,20 @@ class TaskCompletionController extends Controller
         $task = Task::with('schoolClass')->findOrFail($validated['task_id']);
         $this->authorize('create', [TaskCompletion::class, $task]);
         abort_unless($user->system_role === 'admin' || $task->schoolClass->members()->whereKey($user->id)->exists(), 403);
-        $completion = TaskCompletion::create([
-            'user_id' => $user->id,
-            'task_id' => $task->id,
-            'completed_at' => now(),
-        ]);
+        try {
+            $completion = DB::transaction(function () use ($user, $task) {
+                return TaskCompletion::create([
+                    'user_id' => $user->id,
+                    'task_id' => $task->id,
+                    'completed_at' => now(),
+                ]);
+            });
+        } catch (QueryException $exception) {
+            if ($exception->getCode() === '23505') {
+                return response()->json(['message' => 'Tarefa ja marcada como concluida.'], 409);
+            }
+            throw $exception;
+        }
         return (new TaskCompletionResource($completion))->response()->setStatusCode(201);
     }
     public function update(UpdateTaskCompletionRequest $request, string $id)
