@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,6 +20,10 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new RuntimeException('DatabaseSeeder cannot run in production.');
+        }
+
         $teacher = User::firstOrCreate(['email' => 'teacher@example.com'], ['name' => 'Professor Teste', 'birthdate' => '1990-01-01', 'system_role' => 'teacher', 'password' => Str::random(48)]);
         $representative = User::firstOrCreate(['email' => 'representative@example.com'], ['name' => 'Representante Teste', 'birthdate' => '2000-01-01', 'system_role' => 'representative', 'password' => Str::random(48)]);
         $student = User::firstOrCreate(['email' => 'student@example.com'], ['name' => 'Aluno Teste', 'birthdate' => '2005-01-01', 'system_role' => 'student', 'password' => Str::random(48)]);
@@ -30,8 +35,8 @@ class DatabaseSeeder extends Seeder
         $class1->members()->syncWithoutDetaching([$teacher->id => ['role' => 'teacher'], $representative->id => ['role' => 'representative'], $student->id => ['role' => 'student']]);
         $class2->members()->syncWithoutDetaching([$teacher->id => ['role' => 'teacher']]);
 
-        $task1 = Task::firstOrCreate(['class_id' => $class1->id, 'title' => 'Lista de Exercicios de Matematica'], ['description' => 'Resolver os exercicios do capitulo 5.', 'priority' => 'high', 'created_by' => $teacher->id]);
-        Task::firstOrCreate(['class_id' => $class1->id, 'title' => 'Pesquisa sobre Python'], ['description' => 'Apresentar uma pesquisa sobre Python.', 'priority' => 'medium', 'created_by' => $teacher->id]);
+        $task1 = Task::firstOrCreate(['class_id' => $class1->id, 'title' => 'Lista de Exercicios de Matematica'], ['description' => 'Resolver os exercicios do capitulo 5.', 'priority' => 'high', 'due_date' => now()->addDays(7), 'created_by' => $teacher->id]);
+        Task::firstOrCreate(['class_id' => $class1->id, 'title' => 'Pesquisa sobre Python'], ['description' => 'Apresentar uma pesquisa sobre Python.', 'priority' => 'medium', 'due_date' => now()->addDays(7), 'created_by' => $teacher->id]);
         TaskCompletion::firstOrCreate(['user_id' => $student->id, 'task_id' => $task1->id], ['completed_at' => now()]);
         Announcement::firstOrCreate(['class_id' => $class1->id, 'title' => 'Prova de Matematica'], ['content' => 'A prova sera na proxima sexta-feira.', 'created_by' => $teacher->id]);
 

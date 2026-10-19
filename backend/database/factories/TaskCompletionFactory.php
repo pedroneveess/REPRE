@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\TaskCompletion;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TaskCompletionFactory extends Factory
@@ -12,8 +14,8 @@ class TaskCompletionFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => null,
-            'task_id' => null,
+            'user_id' => User::factory(),
+            'task_id' => Task::factory(),
             'completed_at' => fake()->dateTimeBetween('now', '+30 days'),
         ];
     }
