@@ -15,7 +15,9 @@ class SchoolClassPerformanceResource extends JsonResource
             'tasks_total' => $this->tasks_total,
             'completions_total' => $this->completions_total,
             'pending_total' => max(0, $this->tasks_total - $this->completions_total),
-            'percentage' => $this->tasks_total > 0 ? round(($this->completions_total / $this->tasks_total) * 100, 2) : 0,
+            'percentage' => $this->tasks_total > 0
+                ? round(($this->completions_total / $this->tasks_total) * 100, 2)
+                : 0,
         ];
     }
 }
