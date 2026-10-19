@@ -13,6 +13,12 @@ class SchoolClassPolicy
         return $user !== null;
     }
 
+    public function viewPerformance(?User $user, SchoolClass $model): bool
+    {
+        return $user?->system_role === 'admin'
+            || ($user?->system_role === 'teacher' && $model->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists());
+    }
+
     public function view(?User $user, SchoolClass $model): bool
     {
         if (!$user) {

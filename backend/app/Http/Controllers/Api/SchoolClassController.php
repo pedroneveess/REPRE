@@ -10,6 +10,7 @@ use App\Http\Requests\PaginationRequest;
 use App\Http\Resources\SchoolClassResource;
 use Carbon\Carbon;
 use App\Http\Resources\SchoolClassPerformanceResource;
+use Illuminate\Validation\ValidationException;
 
 class SchoolClassController extends Controller
 {
@@ -45,12 +46,10 @@ class SchoolClassController extends Controller
     {
         $schoolClass = SchoolClass::findOrFail($school_class);
         $user = $request->user();
-        $allowed = $user->system_role === 'admin'
-            || ($user->system_role === 'teacher' && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists());
-        abort_unless($allowed, 403);
-        $taskIds = $schoolClass->tasks()->select('id');
-        $students = $schoolClass->members()->wherePivot('role', 'student')->select('users.id', 'users.name')
-            ->selectSub($taskIds->selectRaw('count(*)'), 'tasks_total')
+        $this->authorize('viewPerformance', $schoolClass);
+        $tasksTotal = $schoolClass->tasks()->selectRaw('count(*)');
+        $students = $schoolClass->members()->wherePivotIn('role', ['student', 'representative'])->select('users.id', 'users.name')
+            ->selectSub($tasksTotal, 'tasks_total')
             ->selectSub($schoolClass->tasks()->join('task_completions', 'tasks.id', '=', 'task_completions.task_id')->whereColumn('task_completions.user_id', 'users.id')->selectRaw('count(*)'), 'completions_total');
         return SchoolClassPerformanceResource::collection($students->paginate($request->perPage()));
     }
@@ -88,7 +87,7 @@ class SchoolClassController extends Controller
         $startsOn = $validated['starts_on'] ?? $schoolClass->starts_on;
         $endsOn = $validated['ends_on'] ?? $schoolClass->ends_on;
         if ($startsOn && $endsOn && Carbon::parse($endsOn)->lt(Carbon::parse($startsOn))) {
-            return response()->json(['message' => 'A data final deve ser igual ou posterior a inicial.'], 422);
+            throw ValidationException::withMessages(['ends_on' => 'A data final deve ser igual ou posterior a inicial.']);
         }
 
         $schoolClass->update($validated);
