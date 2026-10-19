@@ -37,3 +37,24 @@ Diretrizes para agentes neste repositório.
 - Não escreva código API antes da leitura integral de `backend` solicitada para a Fase1.
 - A padronização é permitida quando alinhada ao escopo e deve ser separada da implementação.
 - A exceção `AGENTS.md` de padrões de API, limitada a 40 linhas, só pode ser adicionada depois da leitura integral e alinhamento.
+
+## Regras desta etapa
+
+- Estas regras prevalecem sobre as seções 1, 3 e 4 quando houver conflito.
+- Faça perguntas somente sobre negócio; não crie relatórios nem leia ou escreva `maestri/` ou `.maestri/`.
+- Fase2 não executa suíte; padronização é permitida, separada das funcionalidades.
+- Use commits simples em português, como `Adiciona novo controller` ou `Corrige autenticacao`.
+- Mantenha commits próximos de 200 linhas, informe shortstat e execute `route:list` antes de cada commit.
+- Não crie rotas sem classes existentes e não reescreva histórico remoto.
+- URLs são plurais kebab-case: `school-classes`, `task-completions`, `calendar-events`.
+- Parâmetros são singulares snake_case com `whereUuid`, sem regex manual.
+- Use `apiResource` para CRUD; rotas manuais ficam para auth, membros e desempenho.
+- Auth usa `register`, `login`, `logout`, `me`, `forgot-password` e `reset-password`.
+- `SchoolClassController` é singular e usa `index`, `store`, `show`, `update`, `destroy`.
+- Use FormRequest por payload, com regras próprias para POST e PATCH; policies autorizam no servidor.
+- Resources usam envelope `data`; paginação Laravel mantém `links`/`meta`, padrão 20 e máximo 100.
+- Erros usam `message`; validação usa `errors` com 422; preserve 200, 201, 204, 401, 403, 404, 409 e 429, e 500 genérico em produção.
+- Models usam PascalCase singular; tabelas snake_case plural; IDs e FKs UUID.
+- Use `date` para nascimento, `starts_on` e `ends_on`; prazo, evento e `completed_at` usam timestamps consistentes.
+- Policies têm métodos Laravel que retornam bool.
+- Não adicione comentários ao código API, incluindo comentários herdados; essa regra não se aplica a frontend ou vendor.
