@@ -35,8 +35,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Usuario criado com sucesso ',
-            'user' => new UserResource($user),
-            'token' => $token
+            'data' => ['user' => new UserResource($user), 'token' => $token]
         ], 201);
     }
 
@@ -54,8 +53,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login realizado com sucesso.',
-            'user' => new UserResource($user),
-            'token' => $token,
+            'data' => ['user' => new UserResource($user), 'token' => $token],
         ]);
     }
 
@@ -100,7 +98,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Dados atualizados com sucesso.',
-            'user' => new UserResource($user->fresh()),
+            'data' => ['user' => new UserResource($user->fresh())],
         ]);
     }
 
@@ -126,7 +124,7 @@ class AuthController extends Controller
     public function loggedUser(Request $request)
     {
         return response()->json([
-            'user' => new UserResource($request->user()),
+            'data' => ['user' => new UserResource($request->user())],
         ]);
     }
 }
