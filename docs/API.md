@@ -1,30 +1,45 @@
 # API
 
-Todas as rotas protegidas usam `Authorization: Bearer <token>`. Respostas de entidades usam `data`; coleÁıes paginadas usam `data`, `links` e `meta`, com `per_page` padr„o 20 e m·ximo 100.
+Base URL: `/api`. Rotas protegidas exigem `Authorization: Bearer <token>`. Entidades usam envelope `data`; cole√ß√µes paginadas usam `data`, `links` e `meta`. `page` come√ßa em 1 e `per_page` aceita 1..100, padr√£o 20. Erros usam `message`; valida√ß√£o retorna `422` com `errors`; autentica√ß√£o `401`; autoriza√ß√£o `403`; inexist√™ncia `404`; conflito `409`; limite `429`.
 
-## AutenticaÁ„o
+## Autentica√ß√£o
 
-- `POST /api/auth/register`: `name`, `birthdate`, `email`, `password`, `password_confirmation`; retorna `201` com `data.user` e `data.token`.
-- `POST /api/auth/login`: `email`, `password`; retorna `200` com `data.user` e `data.token`; credencial inv·lida retorna `401`.
-- `POST /api/auth/logout`: revoga o token atual e retorna `204`.
-- `GET /api/auth/me`: retorna o usu·rio autenticado.
-- `PUT /api/auth/me`: atualiza perfil; alteraÁ„o de senha revoga tokens.
-- `DELETE /api/auth/me`: remove conta atomicamente e retorna `204`, ou `409` quando h· vÌnculos.
-- `POST /api/auth/forgot-password`: resposta genÈrica, sem revelar existÍncia do email.
-- `POST /api/auth/reset-password`: `token`, `email`, `password`, `password_confirmation`; token È de uso ˙nico e revoga tokens.
+| M√©todo e URL | Acesso | Corpo | Resposta |
+|---|---|---|---|
+| POST `/auth/register` | p√∫blico | obrigat√≥rio: `name,birthdate,email,password,password_confirmation` | `201 {data:{user,token}}` |
+| POST `/auth/login` | p√∫blico | `email,password` | `200 {data:{user,token}}`; credencial inv√°lida `401` |
+| POST `/auth/logout` | Bearer | nenhum | `204` |
+| GET `/auth/me` | Bearer | nenhum | `200 {data:{user}}` |
+| PUT `/auth/me` | Bearer | opcional: `name,birthdate,email,password,password_confirmation` | `200 {data:{user}}`; senha revoga tokens |
+| DELETE `/auth/me` | Bearer | nenhum | `204`; v√≠nculos impeditivos `409` |
+| POST `/auth/forgot-password` | p√∫blico | `email` | `200 {message}` gen√©rico; throttle `429` |
+| POST `/auth/reset-password` | p√∫blico | `token,email,password,password_confirmation` | `200 {message}`; token inv√°lido/reutilizado `422` |
 
-## Recursos
+## Recursos CRUD
 
-CRUD `apiResource`: `/school-classes`, `/tasks`, `/task-completions`, `/announcements`, `/organizations`, `/posts`, `/calendar-events`, `/users`. IDs usam UUID. ValidaÁ„o retorna `422` com `message` e `errors`; ausÍncia `404`; permiss„o `403`; conflito `409`.
+Todos os IDs s√£o UUID. Os endpoints abaixo aceitam `GET` lista, `GET /{id}`, `POST`, `PUT/PATCH /{id}` e `DELETE /{id}`. POST/PATCH usam os campos indicados; `created_by`, `user_id` e pap√©is s√£o definidos no servidor.
 
-Turmas exigem `starts_on` e `ends_on` na criaÁ„o, com fim maior ou igual ao inÌcio. `GET /api/school-classes/{school_class}/performance` lista alunos e representantes da turma com contagem de tarefas, conclusıes, pendÍncias e percentual; somente admin ou professor global com pivot `teacher` acessa.
+| Recurso | URL | Campos POST | Campos PATCH |
+|---|---|---|---|
+| Turmas | `/school-classes` | obrigat√≥rios `name,course,semester,year,starts_on,ends_on`; `ends_on >= starts_on` | opcionais; datas s√£o comparadas com o valor persistido |
+| Tarefas | `/tasks` | obrigat√≥rios `title,due_date,class_id`; opcionais `description,priority` | `title,description,priority,due_date` |
+| Conclus√µes | `/task-completions` | obrigat√≥rio `task_id`; usu√°rio vem do Bearer | opcional `completed_at` |
+| Avisos | `/announcements` | `title,content,class_id` | `title,content` |
+| Organiza√ß√µes | `/organizations` | `name,description`; opcional `type` | `name,description,type` |
+| Posts | `/posts` | `title,description,organization_id` | `title,description` |
+| Eventos | `/calendar-events` | `title,description,starts_at`; opcional `ends_at,class_id` | `title,description,starts_at,ends_at,class_id` |
+| Usu√°rios | `/users` | admin: `name,email,birthdate,system_role` | admin: `name,email,birthdate,system_role` |
 
-Conclusıes usam sempre o usu·rio Bearer, exigem vÌnculo com a turma da tarefa e duplicidade retorna `409`. Exclus„o de tarefa com conclusıes retorna `409`.
+Exemplo de cria√ß√£o de turma: `{ "name":"3A", "course":"Medio", "semester":2, "year":2026, "starts_on":"2026-02-01", "ends_on":"2026-12-15" }`.
 
-## Membros e permissıes
+## Membros
 
-Membros de turma e organizaÁ„o usam `GET`, `POST`, `PATCH /{user_id}` e `DELETE`. Gest„o exige admin ou professor global com pivot `teacher`. PapÈis de organizaÁ„o: `member`, `representative`, `teacher`. Representante local pode gerenciar posts da organizaÁ„o; n„o gerencia membros.
+`GET/POST /school-classes/{school_class}/members`, `PATCH/DELETE /school-classes/{school_class}/members/{user_id}`; POST exige `user_id,role` (`student|representative|teacher`), PATCH exige somente `role`. As rotas equivalentes de organiza√ß√£o usam `member|representative|teacher`. Admin global ou professor global com pivot `teacher` gerenciam membros; listagens de n√£o gestores retornam apenas o pr√≥prio usu√°rio, e listagens autorizadas retornam `id,name,membership role`.
 
-Representante de turma pelo pivot `representative` gerencia tarefas independentemente do cargo global. Professor precisa cargo global `teacher` e pivot `teacher`. Admin global n„o precisa vÌnculo. Dados de terceiros expıem somente `id` e `name` quando aplic·vel; email e nascimento ficam restritos ao prÛprio usu·rio e admin.
+## Desempenho e dashboard
 
-Rotas de autenticaÁ„o aplicam throttle. Eventos globais podem ser criados apenas por admin; professor precisa turma vinculada com pivot `teacher`.
+`GET /school-classes/{school_class}/performance` exige admin ou professor global com pivot `teacher`. Retorna alunos e representantes daquela turma com `id,name,tasks_total,completions_total,pending_total,percentage`, paginado. `GET /dashboard` exige admin/coordinator e retorna agregados globais e listas resumidas.
+
+## Regras de autoriza√ß√£o e conflitos
+
+Representante de turma pelo pivot `representative` gerencia tarefas independentemente do cargo global. Professor precisa cargo global `teacher` e pivot `teacher`; admin n√£o precisa v√≠nculo. Representante local pode criar/editar/excluir posts da organiza√ß√£o, mas n√£o gerencia membros. Conclus√£o exige v√≠nculo do Bearer com a turma e duplicidade retorna `409`. Exclus√£o de tarefa com conclus√µes e exclus√£o de conta com FKs retornam `409` sem deixar a transa√ß√£o inutiliz√°vel. Eventos globais s√£o reservados ao admin; professor s√≥ usa turma com pivot `teacher`.
