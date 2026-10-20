@@ -134,4 +134,12 @@ class SchoolClassTest extends TestCase
         $outsider = User::factory()->create(['system_role' => 'teacher']);
         $this->asUser($outsider)->getJson('/api/school-classes/'.$class->id.'/performance')->assertForbidden();
     }
+
+    public function test_teacher_with_student_pivot_cannot_view_performance(): void
+    {
+        $teacher = User::factory()->create(['system_role' => 'teacher']);
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($teacher->id, ['role' => 'student']);
+        $this->asUser($teacher)->getJson('/api/school-classes/'.$class->id.'/performance')->assertForbidden();
+    }
 }

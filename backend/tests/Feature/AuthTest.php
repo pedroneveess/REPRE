@@ -155,4 +155,14 @@ class AuthTest extends TestCase
             'password' => 'second1234', 'password_confirmation' => 'second1234',
         ])->assertStatus(422);
     }
+
+    public function test_profile_password_change_revokes_tokens(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('old')->plainTextToken;
+        $this->asUser($user)->putJson('/api/auth/me', [
+            'password' => 'changed1234', 'password_confirmation' => 'changed1234',
+        ])->assertOk();
+        $this->asToken($token)->getJson('/api/auth/me')->assertUnauthorized();
+    }
 }

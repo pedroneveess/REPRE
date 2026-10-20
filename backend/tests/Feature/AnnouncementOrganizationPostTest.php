@@ -82,4 +82,13 @@ class AnnouncementOrganizationPostTest extends TestCase
         $student = User::factory()->create(['system_role' => 'student']);
         $this->asUser($student)->postJson('/api/organizations', ['name' => 'Org', 'description' => 'Descrição'])->assertForbidden();
     }
+
+    public function test_representative_can_post_but_cannot_manage_members(): void
+    {
+        $representative = User::factory()->create(['system_role' => 'student']);
+        $organization = Organization::factory()->create();
+        $organization->members()->attach($representative->id, ['role' => 'representative']);
+        $this->asUser($representative)->postJson('/api/posts', ['title' => 'Post', 'description' => 'Texto', 'organization_id' => $organization->id])->assertCreated();
+        $this->asUser($representative)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => User::factory()->create()->id, 'role' => 'member'])->assertForbidden();
+    }
 }
