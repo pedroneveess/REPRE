@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Requests\PaginationRequest;
 use App\Http\Resources\TaskResource;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
@@ -101,7 +102,9 @@ class TaskController extends Controller
         $this->authorize('delete', $task);
 
         try {
-            $task->delete();
+            DB::transaction(function () use ($task) {
+                $task->delete();
+            });
         } catch (QueryException $exception) {
             if ($exception->getCode() === '23503') {
                 return response()->json(['message' => 'Tarefa possui conclusoes vinculadas.'], 409);
