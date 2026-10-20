@@ -12,11 +12,6 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsApi(User $user): static
-    {
-        return $this->withHeader('Authorization', 'Bearer '.$user->createToken('feature')->plainTextToken);
-    }
-
     public function test_coordinator_and_admin_can_view_global_dashboard(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);
@@ -27,10 +22,10 @@ class DashboardTest extends TestCase
         $admin = User::factory()->create(['system_role' => 'admin']);
 
         foreach ([$coordinator, $admin] as $user) {
-            $response = $this->actingAsApi($user)->getJson('/api/dashboard')->assertOk();
-            $response->assertJsonPath('summary.users', 3);
-            $response->assertJsonPath('summary.classes', 1);
-            $response->assertJsonPath('summary.calendar_events', 1);
+            $response = $this->asUser($user)->getJson('/api/dashboard')->assertOk();
+            $response->assertJsonPath('data.summary.users', 4);
+            $response->assertJsonPath('data.summary.classes', 1);
+            $response->assertJsonPath('data.summary.calendar_events', 1);
             $response->assertJsonFragment(['id' => $class->id, 'members_count' => 1]);
         }
     }
@@ -38,6 +33,6 @@ class DashboardTest extends TestCase
     public function test_regular_user_cannot_view_global_dashboard(): void
     {
         $student = User::factory()->create(['system_role' => 'student']);
-        $this->actingAsApi($student)->getJson('/api/dashboard')->assertForbidden();
+        $this->asUser($student)->getJson('/api/dashboard')->assertForbidden();
     }
 }

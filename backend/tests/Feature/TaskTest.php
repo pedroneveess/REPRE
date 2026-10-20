@@ -12,100 +12,107 @@ class TaskTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_teacher_can_create_task(): void
+    private function payload(array $overrides = []): array
+    {
+        return array_merge([
+            'title' => 'Lista', 'due_date' => '2026-12-31',
+        ], $overrides);
+    }
+
+    public function test_teacher_with_pivot_can_create_task(): void
     {
         $user = User::factory()->create(['system_role' => 'teacher']);
-        $token = $user->createToken('test_token')->plainTextToken;
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($user->id, ['role' => 'teacher']);
 
-        $schoolClass = SchoolClass::factory()->create();
-        $schoolClass->members()->attach($user->id);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/tasks', [
-                'title' => 'Lista de Exercicios',
-                'description' => 'Resolver exercicios do capitulo 5.',
-                'priority' => 'high',
-                'due_date' => '2026-12-31',
-                'class_id' => $schoolClass->id,
-            ]);
+        $response = $this->asUser($user)->postJson('/api/tasks', $this->payload(['class_id' => $class->id]));
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('tasks', ['title' => 'Lista de Exercicios']);
+        $this->assertDatabaseHas('tasks', ['title' => 'Lista']);
     }
 
-    public function test_student_cannot_create_task(): void
+    public function test_student_member_cannot_create_task(): void
     {
         $user = User::factory()->create(['system_role' => 'student']);
-        $token = $user->createToken('test_token')->plainTextToken;
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($user->id, ['role' => 'student']);
 
-        $schoolClass = SchoolClass::factory()->create();
-        $schoolClass->members()->attach($user->id);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/tasks', [
-                'title' => 'Lista de Exercicios',
-                'class_id' => $schoolClass->id,
-            ]);
+        $response = $this->asUser($user)->postJson('/api/tasks', $this->payload(['class_id' => $class->id]));
 
         $response->assertStatus(403);
     }
 
-    public function test_class_member_can_view_task(): void
+    public function test_representative_with_pivot_can_create_task(): void
     {
-        $teacher = User::factory()->create(['system_role' => 'teacher']);
-        $student = User::factory()->create(['system_role' => 'student']);
-        $studentToken = $student->createToken('test_token')->plainTextToken;
+        $user = User::factory()->create(['system_role' => 'representative']);
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($user->id, ['role' => 'representative']);
 
-        $schoolClass = SchoolClass::factory()->create();
-        $schoolClass->members()->attach($teacher->id);
-        $schoolClass->members()->attach($student->id);
+        $response = $this->asUser($user)->postJson('/api/tasks', $this->payload(['class_id' => $class->id]));
 
-        $task = Task::factory()->create([
-            'class_id' => $schoolClass->id,
-            'created_by' => $teacher->id,
-        ]);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $studentToken)
-            ->getJson('/api/tasks/' . $task->id);
-
-        $response->assertStatus(200);
+        $response->assertStatus(201);
     }
 
-    public function test_user_cannot_view_task_from_other_class(): void
-    {
-        $user = User::factory()->create(['system_role' => 'student']);
-        $token = $user->createToken('test_token')->plainTextToken;
-
-        $task = Task::factory()->create();
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson('/api/tasks/' . $task->id);
-
-        $response->assertStatus(403);
-    }
-
-    public function test_creator_can_update_own_task(): void
+    public function test_representative_pivot_works_for_any_global_role(): void
     {
         $user = User::factory()->create(['system_role' => 'teacher']);
-        $token = $user->createToken('test_token')->plainTextToken;
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($user->id, ['role' => 'representative']);
 
-        $schoolClass = SchoolClass::factory()->create();
-        $schoolClass->members()->attach($user->id);
+        $this->asUser($user)->postJson('/api/tasks', $this->payload(['class_id' => $class->id]))
+            ->assertStatus(201);
+    }
 
-        $task = Task::factory()->create([
-            'class_id' => $schoolClass->id,
-            'created_by' => $user->id,
-        ]);
+    public function test_admin_can_create_task_without_membership(): void
+    {
+        $admin = User::factory()->create(['system_role' => 'admin']);
+        $class = SchoolClass::factory()->create();
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->putJson('/api/tasks/' . $task->id, [
-                'title' => 'Tarefa Atualizada',
-            ]);
+        $response = $this->asUser($admin)->postJson('/api/tasks', $this->payload(['class_id' => $class->id]));
+
+        $response->assertStatus(201);
+    }
+
+    public function test_teacher_cannot_create_task_in_unrelated_class(): void
+    {
+        $teacher = User::factory()->create(['system_role' => 'teacher']);
+        $memberClass = SchoolClass::factory()->create();
+        $otherClass = SchoolClass::factory()->create();
+        $memberClass->members()->attach($teacher->id, ['role' => 'teacher']);
+
+        $this->asUser($teacher)->postJson('/api/tasks', $this->payload(['class_id' => $otherClass->id]))
+            ->assertStatus(403);
+    }
+
+    public function test_class_member_can_view_task_but_outsider_cannot(): void
+    {
+        $student = User::factory()->create(['system_role' => 'student']);
+        $outsider = User::factory()->create(['system_role' => 'student']);
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($student->id, ['role' => 'student']);
+        $task = Task::factory()->create(['class_id' => $class->id]);
+
+        $this->asUser($student)->getJson('/api/tasks/'.$task->id)->assertStatus(200);
+        $this->asUser($outsider)->getJson('/api/tasks/'.$task->id)->assertStatus(403);
+    }
+
+    public function test_teacher_pivot_can_update_task(): void
+    {
+        $user = User::factory()->create(['system_role' => 'teacher']);
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach($user->id, ['role' => 'teacher']);
+        $task = Task::factory()->create(['class_id' => $class->id, 'created_by' => $user->id]);
+
+        $response = $this->asUser($user)->putJson('/api/tasks/'.$task->id, ['title' => 'Atualizada']);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('tasks', [
-            'id' => $task->id,
-            'title' => 'Tarefa Atualizada',
-        ]);
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'title' => 'Atualizada']);
+    }
+
+    public function test_invalid_uuid_returns_404(): void
+    {
+        $admin = User::factory()->create(['system_role' => 'admin']);
+
+        $this->asUser($admin)->getJson('/api/tasks/not-a-uuid')->assertStatus(404);
     }
 }

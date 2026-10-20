@@ -62,7 +62,10 @@ class TaskPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        $role = $user->system_role === 'teacher' ? 'teacher' : 'representative';
-        return $schoolClass->members()->whereKey($user->id)->wherePivot('role', $role)->exists();
+        if ($schoolClass->members()->whereKey($user->id)->where('class_members.role', 'representative')->exists()) {
+            return true;
+        }
+        return $user->system_role === 'teacher'
+            && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists();
     }
 }

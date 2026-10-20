@@ -12,30 +12,21 @@ class UserManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsApi(User $user): static
-    {
-        return $this->withHeader('Authorization', 'Bearer '.$user->createToken('feature')->plainTextToken);
-    }
-
     public function test_teacher_who_creates_a_class_is_attached_as_teacher_member(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);
-        $response = $this->actingAsApi($teacher)->postJson('/api/school_classes', [
-            'name' => 'Class A',
-            'course' => 'Science',
-            'semester' => 1,
-            'year' => (int) date('Y'),
+        $response = $this->asUser($teacher)->postJson('/api/school-classes', [
+            'name' => 'Class A', 'course' => 'Science', 'semester' => 1, 'year' => (int) date('Y'),
+            'starts_on' => '2026-02-01', 'ends_on' => '2026-12-15',
         ])->assertCreated();
 
+        $classId = $response->json('data.id');
         $this->assertDatabaseHas('class_members', [
-            'class_id' => $response->json('school_class.id'),
-            'user_id' => $teacher->id,
-            'role' => 'teacher',
+            'class_id' => $classId, 'user_id' => $teacher->id, 'role' => 'teacher',
         ]);
         $student = User::factory()->create(['system_role' => 'student']);
-        $this->actingAsApi($teacher)->postJson('/api/school_classes/'.$response->json('school_class.id').'/members', [
-            'user_id' => $student->id,
-            'role' => 'student',
+        $this->asUser($teacher)->postJson('/api/school-classes/'.$classId.'/members', [
+            'user_id' => $student->id, 'role' => 'student',
         ])->assertCreated();
     }
 
@@ -44,31 +35,29 @@ class UserManagementTest extends TestCase
         $coordinator = User::factory()->create(['system_role' => 'coordinator']);
         $unrelated = User::factory()->create(['system_role' => 'student']);
 
-        $this->actingAsApi($coordinator)->getJson('/api/users')->assertOk()->assertJsonFragment(['id' => $unrelated->id]);
-        $this->actingAsApi($coordinator)->getJson('/api/users/'.$unrelated->id)->assertOk();
-        $this->actingAsApi($coordinator)->postJson('/api/users', [])->assertForbidden();
-        $this->actingAsApi($coordinator)->patchJson('/api/users/'.$unrelated->id, ['system_role' => 'admin'])->assertForbidden();
-        $this->actingAsApi($coordinator)->deleteJson('/api/users/'.$unrelated->id)->assertForbidden();
+        $this->asUser($coordinator)->getJson('/api/users')->assertOk()->assertJsonFragment(['id' => $coordinator->id])->assertJsonMissing(['id' => $unrelated->id]);
+        $this->asUser($coordinator)->getJson('/api/users/'.$unrelated->id)->assertForbidden();
+        $this->asUser($coordinator)->postJson('/api/users', [
+            'name' => 'Blocked', 'email' => 'blocked@example.com', 'birthdate' => '2000-01-01', 'system_role' => 'student',
+        ])->assertForbidden();
+        $this->asUser($coordinator)->patchJson('/api/users/'.$unrelated->id, ['system_role' => 'admin'])->assertForbidden();
+        $this->asUser($coordinator)->deleteJson('/api/users/'.$unrelated->id)->assertForbidden();
     }
 
     public function test_admin_can_create_and_update_users_without_accepting_password_or_tokens(): void
     {
         $admin = User::factory()->create(['system_role' => 'admin']);
-        $response = $this->actingAsApi($admin)->postJson('/api/users', [
-            'name' => 'New Teacher',
-            'email' => 'new-teacher@example.com',
-            'birthdate' => '1995-02-03',
-            'system_role' => 'teacher',
-            'password' => 'submitted-password',
-            'tokens' => [],
+        $response = $this->asUser($admin)->postJson('/api/users', [
+            'name' => 'New Teacher', 'email' => 'new-teacher@example.com', 'birthdate' => '1995-02-03',
+            'system_role' => 'teacher', 'password' => 'submitted-password', 'tokens' => [],
         ])->assertCreated();
 
-        $id = $response->json('user.id');
+        $id = $response->json('data.id');
         $created = User::findOrFail($id);
         $this->assertSame('teacher', $created->system_role);
         $this->assertNotSame('submitted-password', $created->password);
-        $this->assertArrayNotHasKey('password', $response->json('user'));
-        $this->actingAsApi($admin)->patchJson('/api/users/'.$id, ['system_role' => 'representative'])->assertOk();
+        $this->assertArrayNotHasKey('password', $response->json('data'));
+        $this->asUser($admin)->patchJson('/api/users/'.$id, ['system_role' => 'representative'])->assertOk();
         $this->assertDatabaseHas('users', ['id' => $id, 'system_role' => 'representative']);
     }
 
@@ -80,11 +69,11 @@ class UserManagementTest extends TestCase
         $class = SchoolClass::factory()->create();
         $class->members()->attach([$user->id, $classmate->id]);
 
-        $response = $this->actingAsApi($user)->getJson('/api/users')->assertOk();
-        $response->assertJsonFragment(['id' => $user->id])->assertJsonFragment(['id' => $classmate->id])->assertJsonMissing(['id' => $unrelated->id]);
-        $this->actingAsApi($user)->getJson('/api/users/'.$classmate->id)->assertOk();
-        $this->actingAsApi($user)->getJson('/api/users/'.$unrelated->id)->assertForbidden();
-        $this->actingAsApi($user)->patchJson('/api/users/'.$classmate->id, ['name' => 'Unauthorized'])->assertForbidden();
+        $response = $this->asUser($user)->getJson('/api/users')->assertOk();
+        $response->assertJsonFragment(['id' => $user->id])->assertJsonMissing(['id' => $classmate->id])->assertJsonMissing(['id' => $unrelated->id]);
+        $this->asUser($user)->getJson('/api/users/'.$classmate->id)->assertForbidden();
+        $this->asUser($user)->getJson('/api/users/'.$unrelated->id)->assertForbidden();
+        $this->asUser($user)->patchJson('/api/users/'.$classmate->id, ['name' => 'Unauthorized'])->assertForbidden();
     }
 
     public function test_admin_delete_returns_conflict_for_restrict_references(): void
@@ -94,6 +83,6 @@ class UserManagementTest extends TestCase
         $class = SchoolClass::factory()->create();
         Announcement::factory()->create(['class_id' => $class->id, 'created_by' => $creator->id]);
 
-        $this->actingAsApi($admin)->deleteJson('/api/users/'.$creator->id)->assertStatus(409);
+        $this->asUser($admin)->deleteJson('/api/users/'.$creator->id)->assertStatus(409);
     }
 }
