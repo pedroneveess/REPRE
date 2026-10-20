@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -164,5 +166,21 @@ class AuthTest extends TestCase
             'password' => 'changed1234', 'password_confirmation' => 'changed1234',
         ])->assertOk();
         $this->asToken($token)->getJson('/api/auth/me')->assertUnauthorized();
+    }
+
+    public function test_reset_link_uses_server_url_not_client_host(): void
+    {
+        Notification::fake();
+        Config::set('app.url', 'https://api.example.test');
+        $user = User::factory()->create(['email' => 'host@example.com']);
+
+        $this->withHeader('Host', 'malicious.example')->postJson('/api/auth/forgot-password', ['email' => $user->email])->assertOk();
+
+        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
+            $url = $notification->toMail($user)->actionUrl;
+            return str_starts_with($url, 'https://api.example.test/reset-password?')
+                && str_contains($url, 'token=')
+                && str_contains($url, 'email=host%40example.com');
+        });
     }
 }
