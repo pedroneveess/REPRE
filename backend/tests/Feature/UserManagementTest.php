@@ -80,9 +80,11 @@ class UserManagementTest extends TestCase
     {
         $admin = User::factory()->create(['system_role' => 'admin']);
         $creator = User::factory()->create(['system_role' => 'teacher']);
+        $creator->createToken('keep');
         $class = SchoolClass::factory()->create();
         Announcement::factory()->create(['class_id' => $class->id, 'created_by' => $creator->id]);
 
         $this->asUser($admin)->deleteJson('/api/users/'.$creator->id)->assertStatus(409);
+        $this->assertDatabaseHas('personal_access_tokens', ['tokenable_id' => $creator->id]);
     }
 }

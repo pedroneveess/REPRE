@@ -123,6 +123,8 @@ class SchoolClassTest extends TestCase
         $class->members()->attach([$student->id => ['role' => 'student'], $representative->id => ['role' => 'representative']]);
         $task = Task::factory()->create(['class_id' => $class->id]);
         TaskCompletion::factory()->create(['task_id' => $task->id, 'user_id' => $student->id]);
+        $otherClass = SchoolClass::factory()->create();
+        Task::factory()->count(3)->create(['class_id' => $otherClass->id]);
 
         $response = $this->asUser($teacher)->getJson('/api/school-classes/'.$class->id.'/performance');
 
