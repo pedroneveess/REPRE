@@ -16,7 +16,6 @@ class AuthorizationTest extends TestCase
     {
         $student1 = User::factory()->create(['system_role' => 'student']);
         $student2 = User::factory()->create(['system_role' => 'student']);
-        $student2Token = $student2->createToken('test_token')->plainTextToken;
 
         $task = Task::factory()->create();
         $completion = \App\Models\TaskCompletion::factory()->create([
@@ -24,17 +23,13 @@ class AuthorizationTest extends TestCase
             'task_id' => $task->id,
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $student2Token)
-            ->getJson('/api/task_completions/' . $completion->id);
-
-        $response->assertStatus(403);
+        $this->asUser($student2)->getJson('/api/task-completions/'.$completion->id)->assertStatus(403);
     }
 
     public function test_teacher_cannot_access_task_completion_outside_class(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);
         $student = User::factory()->create(['system_role' => 'student']);
-        $teacherToken = $teacher->createToken('test_token')->plainTextToken;
 
         $task = Task::factory()->create();
         $completion = \App\Models\TaskCompletion::factory()->create([
@@ -42,21 +37,17 @@ class AuthorizationTest extends TestCase
             'task_id' => $task->id,
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $teacherToken)
-            ->getJson('/api/task_completions/' . $completion->id);
-
-        $response->assertStatus(403);
+        $this->asUser($teacher)->getJson('/api/task-completions/'.$completion->id)->assertStatus(403);
     }
 
     public function test_teacher_member_can_access_task_completion_in_class(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);
         $student = User::factory()->create(['system_role' => 'student']);
-        $teacherToken = $teacher->createToken('test_token')->plainTextToken;
 
         $schoolClass = SchoolClass::factory()->create();
-        $schoolClass->members()->attach($teacher->id);
-        $schoolClass->members()->attach($student->id);
+        $schoolClass->members()->attach($teacher->id, ['role' => 'teacher']);
+        $schoolClass->members()->attach($student->id, ['role' => 'student']);
 
         $task = Task::factory()->create(['class_id' => $schoolClass->id]);
         $completion = \App\Models\TaskCompletion::factory()->create([
@@ -64,10 +55,7 @@ class AuthorizationTest extends TestCase
             'task_id' => $task->id,
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $teacherToken)
-            ->getJson('/api/task_completions/' . $completion->id);
-
-        $response->assertStatus(200);
+        $this->asUser($teacher)->getJson('/api/task-completions/'.$completion->id)->assertStatus(200);
     }
 
     public function test_teacher_index_lists_only_completions_from_member_classes(): void
@@ -75,14 +63,13 @@ class AuthorizationTest extends TestCase
         $teacher = User::factory()->create(['system_role' => 'teacher']);
         $student = User::factory()->create(['system_role' => 'student']);
         $otherStudent = User::factory()->create(['system_role' => 'student']);
-        $teacherToken = $teacher->createToken('test_token')->plainTextToken;
 
         $memberClass = SchoolClass::factory()->create();
-        $memberClass->members()->attach($teacher->id);
-        $memberClass->members()->attach($student->id);
+        $memberClass->members()->attach($teacher->id, ['role' => 'teacher']);
+        $memberClass->members()->attach($student->id, ['role' => 'student']);
 
         $otherClass = SchoolClass::factory()->create();
-        $otherClass->members()->attach($otherStudent->id);
+        $otherClass->members()->attach($otherStudent->id, ['role' => 'student']);
 
         $memberTask = Task::factory()->create(['class_id' => $memberClass->id]);
         $otherTask = Task::factory()->create(['class_id' => $otherClass->id]);
@@ -96,11 +83,10 @@ class AuthorizationTest extends TestCase
             'task_id' => $otherTask->id,
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $teacherToken)
-            ->getJson('/api/task_completions');
+        $response = $this->asUser($teacher)->getJson('/api/task-completions');
 
         $response->assertStatus(200);
-        $response->assertJsonCount(1, 'task_completions');
+        $response->assertJsonCount(1, 'data');
         $response->assertJsonFragment(['id' => $memberCompletion->id]);
     }
 
@@ -108,14 +94,8 @@ class AuthorizationTest extends TestCase
     {
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
-        $user2Token = $user2->createToken('test_token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $user2Token)
-            ->putJson('/api/updateUser', [
-                'name' => 'Hackeado',
-            ]);
-
-        $response->assertStatus(200);
+        $this->asUser($user2)->putJson('/api/auth/me', ['name' => 'Hackeado'])->assertStatus(200);
         $this->assertDatabaseHas('users', ['id' => $user1->id, 'name' => $user1->name]);
         $this->assertDatabaseMissing('users', ['id' => $user1->id, 'name' => 'Hackeado']);
     }
@@ -123,16 +103,13 @@ class AuthorizationTest extends TestCase
     public function test_unauthenticated_cannot_access_any_resource(): void
     {
         $endpoints = [
-            ['GET', '/api/school_classes'],
+            ['GET', '/api/school-classes'],
             ['GET', '/api/tasks'],
-            ['POST', '/api/school_classes'],
+            ['POST', '/api/school-classes'],
             ['POST', '/api/tasks'],
         ];
 
-        foreach ($endpoints as $endpoint) {
-            $method = $endpoint[0];
-            $url = $endpoint[1];
-
+        foreach ($endpoints as [$method, $url]) {
             $response = match ($method) {
                 'GET' => $this->getJson($url),
                 'POST' => $this->postJson($url),

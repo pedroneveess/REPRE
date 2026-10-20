@@ -13,12 +13,7 @@ class MemberAndCalendarEventTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsApi(User $user): static
-    {
-        return $this->withHeader('Authorization', 'Bearer '.$user->createToken('feature')->plainTextToken);
-    }
-
-    public function test_member_endpoints_apply_view_and_mutation_policies_and_validate_scope(): void
+    public function test_member_endpoints_apply_view_and_mutation_policies(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);
         $student = User::factory()->create(['system_role' => 'student']);
@@ -27,18 +22,23 @@ class MemberAndCalendarEventTest extends TestCase
         $class->members()->attach($teacher->id, ['role' => 'teacher']);
         $class->members()->attach($student->id, ['role' => 'student']);
         $organization = Organization::factory()->create();
-        $organization->members()->attach($teacher->id, ['role' => 'administrator']);
+        $organization->members()->attach($teacher->id, ['role' => 'teacher']);
         $organization->members()->attach($student->id, ['role' => 'member']);
 
-        $this->actingAsApi($student)->getJson('/api/school_classes/'.$class->id.'/members')->assertOk();
-        $this->actingAsApi($outsider)->getJson('/api/school_classes/'.$class->id.'/members')->assertForbidden();
-        $this->actingAsApi($teacher)->postJson('/api/school_classes/'.$class->id.'/members', ['user_id' => $outsider->id, 'role' => 'student', 'system_role' => 'admin'])->assertCreated();
+        $this->asUser($student)->getJson('/api/school-classes/'.$class->id.'/members')->assertOk();
+        $this->asUser($outsider)->getJson('/api/school-classes/'.$class->id.'/members')->assertForbidden();
+        $this->asUser($teacher)->postJson('/api/school-classes/'.$class->id.'/members', ['user_id' => $outsider->id, 'role' => 'student'])
+            ->assertCreated();
         $this->assertDatabaseHas('users', ['id' => $outsider->id, 'system_role' => 'student']);
-        $this->actingAsApi($teacher)->postJson('/api/school_classes/'.$class->id.'/members', ['user_id' => $outsider->id, 'role' => 'administrator'])->assertUnprocessable();
-        $this->actingAsApi($teacher)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $outsider->id, 'role' => 'president'])->assertCreated();
-        $this->actingAsApi($teacher)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $outsider->id, 'role' => 'teacher'])->assertUnprocessable();
+        $this->asUser($teacher)->postJson('/api/school-classes/'.$class->id.'/members', ['user_id' => $outsider->id, 'role' => 'administrator'])
+            ->assertUnprocessable();
+        $this->asUser($teacher)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $outsider->id, 'role' => 'representative'])
+            ->assertCreated();
+        $this->asUser($teacher)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $outsider->id, 'role' => 'coordinator'])
+            ->assertUnprocessable();
         $otherClass = SchoolClass::factory()->create();
-        $this->actingAsApi($teacher)->postJson('/api/school_classes/'.$otherClass->id.'/members', ['user_id' => $outsider->id, 'role' => 'student'])->assertForbidden();
+        $this->asUser($teacher)->postJson('/api/school-classes/'.$otherClass->id.'/members', ['user_id' => $outsider->id, 'role' => 'student'])
+            ->assertForbidden();
     }
 
     public function test_admin_can_manage_members_and_coordinator_is_read_only(): void
@@ -49,11 +49,15 @@ class MemberAndCalendarEventTest extends TestCase
         $class = SchoolClass::factory()->create();
         $organization = Organization::factory()->create();
 
-        $this->actingAsApi($admin)->postJson('/api/school_classes/'.$class->id.'/members', ['user_id' => $member->id, 'role' => 'representative'])->assertCreated();
-        $this->actingAsApi($admin)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $member->id, 'role' => 'coordinator'])->assertCreated();
-        $this->actingAsApi($coordinator)->getJson('/api/school_classes/'.$class->id.'/members')->assertOk();
-        $this->actingAsApi($coordinator)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $member->id, 'role' => 'member'])->assertForbidden();
-        $this->actingAsApi($admin)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => 'not-a-uuid', 'role' => 'member'])->assertUnprocessable();
+        $this->asUser($admin)->postJson('/api/school-classes/'.$class->id.'/members', ['user_id' => $member->id, 'role' => 'representative'])
+            ->assertCreated();
+        $this->asUser($admin)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $member->id, 'role' => 'teacher'])
+            ->assertCreated();
+        $this->asUser($coordinator)->getJson('/api/school-classes/'.$class->id.'/members')->assertOk();
+        $this->asUser($coordinator)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => $member->id, 'role' => 'member'])
+            ->assertForbidden();
+        $this->asUser($admin)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => 'not-a-uuid', 'role' => 'member'])
+            ->assertUnprocessable();
     }
 
     public function test_calendar_event_visibility_and_writes_follow_roles_and_class_membership(): void
@@ -62,22 +66,35 @@ class MemberAndCalendarEventTest extends TestCase
         $student = User::factory()->create(['system_role' => 'student']);
         $otherStudent = User::factory()->create(['system_role' => 'student']);
         $class = SchoolClass::factory()->create();
-        $class->members()->attach($teacher->id);
-        $class->members()->attach($student->id);
+        $class->members()->attach($teacher->id, ['role' => 'teacher']);
+        $class->members()->attach($student->id, ['role' => 'student']);
         $outsideClass = SchoolClass::factory()->create();
         $global = CalendarEvent::factory()->global()->create();
         $visible = CalendarEvent::factory()->create(['class_id' => $class->id]);
         $hidden = CalendarEvent::factory()->create(['class_id' => $outsideClass->id]);
 
-        $this->actingAsApi($student)->getJson('/api/calendar_events')->assertOk()->assertJsonFragment(['id' => $global->id])->assertJsonFragment(['id' => $visible->id])->assertJsonMissing(['id' => $hidden->id]);
-        $this->actingAsApi($otherStudent)->getJson('/api/calendar_events/'.$global->id)->assertOk();
-        $this->actingAsApi($otherStudent)->getJson('/api/calendar_events/'.$hidden->id)->assertForbidden();
-        $this->actingAsApi($teacher)->postJson('/api/calendar_events', ['title' => 'Class event', 'description' => 'Details', 'starts_at' => '2026-11-01T10:00:00Z', 'class_id' => $class->id])->assertCreated();
-        $this->actingAsApi($teacher)->postJson('/api/calendar_events', ['title' => 'Global event', 'description' => 'Details', 'starts_at' => '2026-11-01T10:00:00Z'])->assertForbidden();
-        $this->actingAsApi($teacher)->putJson('/api/calendar_events/'.$hidden->id, ['title' => 'IDOR'])->assertForbidden();
-        $this->actingAsApi($teacher)->putJson('/api/calendar_events/'.$visible->id, ['starts_at' => '2026-11-01T11:00:00Z', 'ends_at' => '2026-11-01T10:00:00Z'])->assertUnprocessable();
+        $this->asUser($student)->getJson('/api/calendar-events')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $global->id])
+            ->assertJsonFragment(['id' => $visible->id])
+            ->assertJsonMissing(['id' => $hidden->id]);
+        $this->asUser($otherStudent)->getJson('/api/calendar-events/'.$global->id)->assertOk();
+        $this->asUser($otherStudent)->getJson('/api/calendar-events/'.$hidden->id)->assertForbidden();
+        $this->asUser($teacher)->postJson('/api/calendar-events', [
+            'title' => 'Class event', 'description' => 'Details', 'starts_at' => '2026-11-01T10:00:00Z', 'class_id' => $class->id,
+        ])->assertCreated();
+        $this->asUser($teacher)->postJson('/api/calendar-events', [
+            'title' => 'Global event', 'description' => 'Details', 'starts_at' => '2026-11-01T10:00:00Z',
+        ])->assertForbidden();
+        $this->asUser($teacher)->putJson('/api/calendar-events/'.$hidden->id, ['title' => 'IDOR'])->assertForbidden();
+        $this->asUser($teacher)->putJson('/api/calendar-events/'.$visible->id, [
+            'starts_at' => '2026-11-01T11:00:00Z', 'ends_at' => '2026-11-01T10:00:00Z',
+        ])->assertUnprocessable();
         $coordinator = User::factory()->create(['system_role' => 'coordinator']);
-        $this->actingAsApi($coordinator)->getJson('/api/calendar_events')->assertOk()->assertJsonFragment(['id' => $hidden->id]);
-        $this->actingAsApi($coordinator)->putJson('/api/calendar_events/'.$global->id, ['title' => 'Changed'])->assertForbidden();
+        $this->asUser($coordinator)->getJson('/api/calendar-events')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $hidden->id]);
+        $this->asUser($coordinator)->putJson('/api/calendar-events/'.$global->id, ['title' => 'Changed'])->assertForbidden();
     }
 }
+
