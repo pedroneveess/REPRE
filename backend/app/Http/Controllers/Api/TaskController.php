@@ -7,14 +7,14 @@ use App\Models\Task;
 use App\Models\SchoolClass;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Http\Requests\PaginationRequest;
+use App\Http\Requests\TaskIndexRequest;
 use App\Http\Resources\TaskResource;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
-    public function index(PaginationRequest $request)
+    public function index(TaskIndexRequest $request)
     {
         $this->authorize('viewAny', Task::class);
 
@@ -26,7 +26,26 @@ class TaskController extends Controller
                 $q->where('users.id', $user->id);
             });
         }
-        return TaskResource::collection($query->paginate($request->perPage()));
+        $filters = $request->validated();
+        foreach (['class_id', 'priority'] as $field) {
+            if (isset($filters[$field])) {
+                $query->where($field, $filters[$field]);
+            }
+        }
+        if (array_key_exists('completed', $filters)) {
+            $query->whereHas('completions', fn ($q) => $q->where('user_id', $user->id), $request->boolean('completed') ? '>=' : '=', $request->boolean('completed') ? 1 : 0);
+        }
+        foreach (['due_from' => '>=', 'due_to' => '<='] as $field => $operator) {
+            if (isset($filters[$field])) {
+                $query->where('due_date', $operator, $request->deadline($field));
+            }
+        }
+        if (isset($filters['search'])) {
+            $query->where('title', 'ilike', '%'.addcslashes($filters['search'], '\\%_').'%');
+        }
+        $order = $filters['order'] ?? 'asc';
+        return TaskResource::collection($query->orderBy('due_date', $order)->orderBy('id', $order)
+            ->paginate($request->perPage())->withQueryString());
     }
 
     public function show(string $id)

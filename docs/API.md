@@ -32,6 +32,18 @@ Todos os IDs são UUID. Os endpoints abaixo aceitam `GET` lista, `GET /{id}`, `P
 
 Exemplo de criação de turma: `{ "name":"3A", "course":"Medio", "semester":2, "year":2026, "starts_on":"2026-02-01", "ends_on":"2026-12-15" }`.
 
+## Lista de atividades
+
+`GET /tasks` exige Bearer e retorna `200` com `data`, `links` e `meta`. Todos os parâmetros são opcionais: `page` (mínimo 1), `per_page` (1..100, padrão 20), `class_id` (UUID), `completed` (`true`, `false`, `1`, `0`), `due_from`, `due_to`, `priority` (`low`, `medium`, `high`), `order` (`asc` ou `desc`, padrão `asc`) e `search` (busca literal no título, sem diferenciar maiúsculas, até 100 caracteres).
+
+Os filtros são combinados e preservam a visibilidade por turma. UUID inexistente ou turma fora do alcance retorna lista vazia; UUID malformado retorna `422`. `completed` considera somente as conclusões do Bearer. O intervalo é inclusivo: datas `YYYY-MM-DD` abrangem o dia em `America/Sao_Paulo`; horários com offset são convertidos para esse fuso para comparar com o prazo persistido. Intervalo invertido e parâmetros inválidos retornam `422` com `errors` por campo. A ordenação usa `due_date` e `id`, ambos na direção de `order`; links de paginação preservam os filtros.
+
+Exemplo: `GET /api/tasks?completed=false&priority=high&due_from=2026-12-01&due_to=2026-12-01&order=asc&per_page=1`. Formato de resposta (links/meta abreviados):
+
+```json
+{"data":[{"id":"11111111-1111-4111-8111-111111111111","title":"Exercícios","description":null,"priority":"high","due_date":"2026-12-01T12:00:00.000000Z","class_id":"22222222-2222-4222-8222-222222222222","created_by":"33333333-3333-4333-8333-333333333333"}],"links":{"next":null},"meta":{"current_page":1,"per_page":1,"total":1}}
+```
+
 ## Recados
 
 Representante com pivot `representative` pode criar, editar e excluir recados da própria turma, independentemente do cargo global. Professor global com pivot `teacher` e admin mantêm acesso. Aluno comum e representante de outra turma recebem `403` nas escritas.
