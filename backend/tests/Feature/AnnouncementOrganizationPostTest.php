@@ -91,4 +91,46 @@ class AnnouncementOrganizationPostTest extends TestCase
         $this->asUser($representative)->postJson('/api/posts', ['title' => 'Post', 'description' => 'Texto', 'organization_id' => $organization->id])->assertCreated();
         $this->asUser($representative)->postJson('/api/organizations/'.$organization->id.'/members', ['user_id' => User::factory()->create()->id, 'role' => 'member'])->assertForbidden();
     }
+
+    public function test_representative_manages_announcements_only_in_own_class_and_student_cannot(): void
+    {
+        $representative = User::factory()->create(['system_role' => 'student']);
+        $student = User::factory()->create(['system_role' => 'student']);
+        $class = SchoolClass::factory()->create();
+        $class->members()->attach([$representative->id => ['role' => 'representative'], $student->id => ['role' => 'student']]);
+        $otherClass = SchoolClass::factory()->create();
+        $otherAnnouncement = Announcement::factory()->create(['class_id' => $otherClass->id]);
+
+        $announcement = $this->asUser($representative)->postJson('/api/announcements', [
+            'title' => 'Aviso',
+            'content' => 'Texto',
+            'class_id' => $class->id,
+        ])->assertCreated()->json('data');
+
+        $this->asUser($representative)->putJson('/api/announcements/'.$announcement['id'], ['title' => 'Alterado'])->assertOk();
+        $this->asUser($representative)->deleteJson('/api/announcements/'.$announcement['id'])->assertNoContent();
+        $this->asUser($representative)->postJson('/api/announcements', ['title' => 'Outro', 'content' => 'Texto', 'class_id' => $otherClass->id])->assertForbidden();
+        $this->asUser($representative)->putJson('/api/announcements/'.$otherAnnouncement->id, ['title' => 'Outro'])->assertForbidden();
+        $this->asUser($representative)->deleteJson('/api/announcements/'.$otherAnnouncement->id)->assertForbidden();
+        $this->asUser($student)->postJson('/api/announcements', ['title' => 'Aluno', 'content' => 'Texto', 'class_id' => $class->id])->assertForbidden();
+        $ownAnnouncement = Announcement::factory()->create(['class_id' => $class->id]);
+        $this->asUser($student)->patchJson('/api/announcements/'.$ownAnnouncement->id, ['title' => 'Aluno'])->assertForbidden();
+        $this->asUser($student)->deleteJson('/api/announcements/'.$ownAnnouncement->id)->assertForbidden();
+    }
+
+    public function test_teacher_and_admin_keep_announcement_management_permissions(): void
+    {
+        foreach (['teacher', 'admin'] as $role) {
+            $user = User::factory()->create(['system_role' => $role]);
+            $class = SchoolClass::factory()->create();
+            if ($role === 'teacher') {
+                $class->members()->attach($user->id, ['role' => 'teacher']);
+            }
+            $id = $this->asUser($user)->postJson('/api/announcements', [
+                'title' => 'Aviso', 'content' => 'Texto', 'class_id' => $class->id,
+            ])->assertCreated()->json('data.id');
+            $this->asUser($user)->patchJson('/api/announcements/'.$id, ['title' => 'Atualizado'])->assertOk();
+            $this->asUser($user)->deleteJson('/api/announcements/'.$id)->assertNoContent();
+        }
+    }
 }

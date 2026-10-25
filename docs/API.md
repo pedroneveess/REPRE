@@ -32,6 +32,12 @@ Todos os IDs são UUID. Os endpoints abaixo aceitam `GET` lista, `GET /{id}`, `P
 
 Exemplo de criação de turma: `{ "name":"3A", "course":"Medio", "semester":2, "year":2026, "starts_on":"2026-02-01", "ends_on":"2026-12-15" }`.
 
+## Recados
+
+Representante com pivot `representative` pode criar, editar e excluir recados da própria turma, independentemente do cargo global. Professor global com pivot `teacher` e admin mantêm acesso. Aluno comum e representante de outra turma recebem `403` nas escritas.
+
+`POST /announcements` exige `title,content,class_id` e retorna `201 {data:{id,class_id,title,content,created_by}}`. `PATCH /announcements/{id}` aceita `title,content` e retorna `200` no mesmo formato; `DELETE` retorna `204`. Exemplo de POST: `{"title":"Entrega amanhã","content":"Enviar a atividade até as 18h.","class_id":"22222222-2222-4222-8222-222222222222"}`. A autoria vem do usuário autenticado; `class_id` não é alterável pelo PATCH.
+
 ## Membros
 
 `GET/POST /school-classes/{school_class}/members`, `PATCH/DELETE /school-classes/{school_class}/members/{user_id}`; POST exige `user_id,role` (`student`, `representative` ou `teacher`), PATCH exige somente `role`. Organizações usam `GET/POST /organizations/{organization}/members` e `PATCH/DELETE /organizations/{organization}/members/{user_id}`, com `role` igual a `member`, `representative` ou `teacher`. GET retorna coleção paginada com 200; POST retorna membro com 201; PATCH retorna membro com 200; DELETE retorna 204. IDs ausentes retornam 404 e payload inválido retorna 422. Admin global ou professor global com pivot `teacher` gerenciam membros; listagens de não gestores retornam apenas o próprio usuário, e listagens autorizadas retornam `id,name,role`; dados privados adicionais aparecem apenas para o próprio usuário ou admin.
@@ -60,7 +66,7 @@ Representante de turma pelo pivot `representative` gerencia tarefas independente
 | Turmas | usuário vinculado; admin/coordinator globais | teacher global ou admin | teacher global + pivot teacher ou admin | teacher global + pivot teacher ou admin |
 | Tarefas | membro da turma; admin/coordinator | pivot representative; teacher global + pivot teacher; admin | mesmos vínculos | mesmos vínculos |
 | Conclusões | próprio; teacher global com pivot teacher na turma; admin | student/representative/teacher vinculado à turma ou admin | próprio, exceto coordinator; admin | próprio, exceto coordinator; admin |
-| Avisos | membro da turma; admin/coordinator | teacher global com pivot teacher na turma; admin | teacher global com pivot teacher na turma; admin | teacher global com pivot teacher na turma; admin |
+| Avisos | membro da turma; admin/coordinator | pivot representative na turma; teacher global com pivot teacher; admin | mesmos vínculos | mesmos vínculos |
 | Eventos | membro da turma; admin/coordinator; eventos globais para qualquer autenticado | teacher global com pivot teacher na turma; admin; globais somente admin | teacher global com pivot teacher nas turmas de origem e destino; admin | teacher global com pivot teacher na turma; admin |
 | Organizações | membro; admin/coordinator | teacher global ou admin | teacher global com pivot teacher ou admin | teacher global com pivot teacher ou admin |
 | Posts | membro; admin/coordinator | representative local, teacher global com pivot teacher ou admin | mesmos vínculos | mesmos vínculos |

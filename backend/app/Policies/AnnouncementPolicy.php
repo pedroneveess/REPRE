@@ -26,13 +26,20 @@ class AnnouncementPolicy
 
     public function create(?User $user, SchoolClass $schoolClass): bool
     {
-        if (!$user) {
-            return false;
-        }
-        return $user->system_role === 'admin' || ($user->system_role === 'teacher' && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists());
+        return $this->canManage($user, $schoolClass);
     }
 
     public function update(?User $user, Announcement $model): bool
+    {
+        return $this->canManage($user, $model->schoolClass);
+    }
+
+    public function delete(?User $user, Announcement $model): bool
+    {
+        return $this->update($user, $model);
+    }
+
+    private function canManage(?User $user, SchoolClass $schoolClass): bool
     {
         if (!$user) {
             return false;
@@ -40,14 +47,10 @@ class AnnouncementPolicy
         if ($user->system_role === 'admin') {
             return true;
         }
-        if ($user->system_role === 'teacher') {
-            return $model->schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists();
+        if ($schoolClass->members()->whereKey($user->id)->where('class_members.role', 'representative')->exists()) {
+            return true;
         }
-        return false;
-    }
-
-    public function delete(?User $user, Announcement $model): bool
-    {
-        return $this->update($user, $model);
+        return $user->system_role === 'teacher'
+            && $schoolClass->members()->whereKey($user->id)->where('class_members.role', 'teacher')->exists();
     }
 }
