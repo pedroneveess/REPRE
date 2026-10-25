@@ -11,6 +11,7 @@ use App\Http\Resources\SchoolClassResource;
 use Carbon\Carbon;
 use App\Http\Resources\SchoolClassPerformanceResource;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class SchoolClassController extends Controller
 {
@@ -45,13 +46,29 @@ class SchoolClassController extends Controller
     public function performance(PaginationRequest $request, string $school_class)
     {
         $schoolClass = SchoolClass::findOrFail($school_class);
-        $user = $request->user();
         $this->authorize('viewPerformance', $schoolClass);
+        $now = now('America/Sao_Paulo');
         $tasksTotal = $schoolClass->tasks()->selectRaw('count(*)');
         $students = $schoolClass->members()->wherePivotIn('role', ['student', 'representative'])->select('users.id', 'users.name')
             ->selectSub($tasksTotal, 'tasks_total')
-            ->selectSub($schoolClass->tasks()->join('task_completions', 'tasks.id', '=', 'task_completions.task_id')->whereColumn('task_completions.user_id', 'users.id')->selectRaw('count(*)'), 'completions_total');
-        return SchoolClassPerformanceResource::collection($students->paginate($request->perPage()));
+            ->selectSub($schoolClass->tasks()->join('task_completions', 'tasks.id', '=', 'task_completions.task_id')->whereColumn('task_completions.user_id', 'users.id')->selectRaw('count(*)'), 'completions_total')
+            ->selectSub($schoolClass->tasks()->where('due_date', '<', $now)
+                ->whereDoesntHave('completions', fn ($q) => $q->whereColumn('task_completions.user_id', 'users.id'))
+                ->selectRaw('count(*)'), 'overdue_total');
+        $totals = DB::query()->fromSub((clone $students)->toBase(), 'performance')
+            ->selectRaw('count(*) as students_total, coalesce(sum(tasks_total), 0) as tasks_total, coalesce(sum(completions_total), 0) as completions_total, coalesce(sum(overdue_total), 0) as overdue_total')
+            ->first();
+        $summary = [
+            'students_total' => (int) $totals->students_total,
+            'tasks_total' => (int) $totals->tasks_total,
+            'completions_total' => (int) $totals->completions_total,
+            'pending_total' => max(0, $totals->tasks_total - $totals->completions_total),
+            'overdue_total' => (int) $totals->overdue_total,
+            'percentage' => $totals->tasks_total > 0
+                ? round(($totals->completions_total / $totals->tasks_total) * 100, 2) : 0,
+        ];
+        return SchoolClassPerformanceResource::collection($students->paginate($request->perPage()))
+            ->additional(['summary' => $summary]);
     }
 
     public function store(StoreSchoolClassRequest $request)

@@ -137,6 +137,51 @@ class SchoolClassTest extends TestCase
         $this->asUser($outsider)->getJson('/api/school-classes/'.$class->id.'/performance')->assertForbidden();
     }
 
+    public function test_performance_counts_overdue_and_summarizes_all_students_across_pages(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-12-01T15:00:00Z'));
+        $teacher = User::factory()->create(['system_role' => 'teacher']);
+        $class = SchoolClass::factory()->create();
+        $student = User::factory()->create(['system_role' => 'student']);
+        $representative = User::factory()->create(['system_role' => 'student']);
+        $class->members()->attach([$teacher->id => ['role' => 'teacher'], $student->id => ['role' => 'student'], $representative->id => ['role' => 'representative']]);
+        $overdue = Task::factory()->create(['class_id' => $class->id, 'due_date' => '2026-12-01T11:59:59-03:00']);
+        Task::factory()->create(['class_id' => $class->id, 'due_date' => '2026-12-01T12:00:00-03:00']);
+        Task::factory()->create(['class_id' => $class->id, 'due_date' => '2026-12-01T12:00:01-03:00']);
+        Task::factory()->create(['due_date' => '2026-11-30T12:00:00-03:00']);
+        TaskCompletion::factory()->create(['task_id' => $overdue->id, 'user_id' => $student->id]);
+        TaskCompletion::factory()->create(['task_id' => $overdue->id, 'user_id' => $teacher->id]);
+        $path = '/api/school-classes/'.$class->id.'/performance';
+        $summary = ['students_total' => 2, 'tasks_total' => 6, 'completions_total' => 1, 'pending_total' => 5, 'overdue_total' => 1, 'percentage' => 16.67];
+        $rows = [];
+        foreach ([1, 2] as $page) {
+            $response = $this->asUser($teacher)->getJson($path.'?per_page=1&page='.$page)->assertOk()
+                ->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 2)
+                ->assertJsonPath('summary', $summary)->assertJsonStructure(['data', 'links', 'meta', 'summary']);
+            $rows[$response->json('data.0.id')] = $response->json('data.0');
+        }
+        $this->assertSame(0, $rows[$student->id]['overdue_total']);
+        $this->assertSame(1, $rows[$representative->id]['overdue_total']);
+        $this->assertSame(2, $rows[$student->id]['pending_total']);
+        $this->assertSame(3, $rows[$representative->id]['pending_total']);
+        $this->asUser(User::factory()->create(['system_role' => 'admin']))->getJson($path)->assertOk()->assertJsonPath('summary', $summary);
+        foreach ([$student, $representative, User::factory()->create(['system_role' => 'coordinator'])] as $user) {
+            $this->asUser($user)->getJson($path)->assertForbidden();
+        }
+    }
+
+    public function test_performance_summary_is_zero_without_students_or_tasks(): void
+    {
+        $admin = User::factory()->create(['system_role' => 'admin']);
+        $class = SchoolClass::factory()->create();
+        $path = '/api/school-classes/'.$class->id.'/performance';
+        $summary = ['students_total' => 0, 'tasks_total' => 0, 'completions_total' => 0, 'pending_total' => 0, 'overdue_total' => 0, 'percentage' => 0];
+        $this->asUser($admin)->getJson($path)->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('summary', $summary);
+        $class->members()->attach(User::factory()->create()->id, ['role' => 'student']);
+        $summary['students_total'] = 1;
+        $this->asUser($admin)->getJson($path)->assertOk()->assertJsonPath('summary', $summary)->assertJsonPath('data.0.overdue_total', 0);
+    }
+
     public function test_teacher_with_student_pivot_cannot_view_performance(): void
     {
         $teacher = User::factory()->create(['system_role' => 'teacher']);

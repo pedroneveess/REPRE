@@ -56,7 +56,17 @@ Representante com pivot `representative` pode criar, editar e excluir recados da
 
 ## Desempenho e dashboard
 
-`GET /school-classes/{school_class}/performance` exige admin ou professor global com pivot `teacher`. Retorna alunos e representantes daquela turma com `id,name,tasks_total,completions_total,pending_total,percentage`, paginado. `GET /dashboard` exige admin/coordinator e retorna agregados globais e listas resumidas.
+`GET /school-classes/{school_class}/performance` exige admin ou professor global com pivot `teacher`. Aceita `page` (mínimo 1) e `per_page` (1..100, padrão 20). Retorna alunos e representantes daquela turma com `id,name,tasks_total,completions_total,pending_total,overdue_total,percentage`, paginado. `overdue_total` conta atividades com prazo estritamente anterior ao momento atual em `America/Sao_Paulo` e sem conclusão daquele aluno. Atividade concluída, futura ou com prazo exatamente igual ao momento atual não é atrasada; atrasadas estão incluídas nas pendentes.
+
+O bloco `summary` fica na raiz, ao lado de `data,links,meta`, e considera a turma inteira, independentemente da página: `students_total` conta alunos e representantes; `tasks_total` soma as atividades atribuídas a cada um (número de atividades da turma × número de alunos); `completions_total,pending_total,overdue_total` somam os respectivos contadores individuais. `percentage` é `completions_total / tasks_total * 100`, arredondado a duas casas, ou zero sem atividades atribuídas. Conclusões de professores ou de pessoas fora desses vínculos não entram no resumo. Acesso não autorizado retorna `403`, turma inexistente `404` e paginação inválida `422`.
+
+Exemplo: `GET /api/school-classes/22222222-2222-4222-8222-222222222222/performance?per_page=1`. Duas pessoas, três atividades, uma conclusão e uma pendência atrasada produzem (links/meta abreviados):
+
+```json
+{"data":[{"id":"33333333-3333-4333-8333-333333333333","name":"Ana","tasks_total":3,"completions_total":1,"pending_total":2,"overdue_total":0,"percentage":33.33}],"links":{"next":"http://localhost:8000/api/school-classes/22222222-2222-4222-8222-222222222222/performance?page=2"},"meta":{"current_page":1,"per_page":1,"total":2},"summary":{"students_total":2,"tasks_total":6,"completions_total":1,"pending_total":5,"overdue_total":1,"percentage":16.67}}
+```
+
+`GET /dashboard` exige admin/coordinator e retorna agregados globais e listas resumidas.
 
 ## Regras de autorização e conflitos
 
